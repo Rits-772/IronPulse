@@ -54,13 +54,25 @@ const navItems = [
   { name: "Workout Planner", href: "/planner", icon: CalendarDays },
 ];
 
-export function Sidebar() {
+export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const [location] = useLocation();
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
 
   return (
-    <div className="w-64 h-screen bg-card/80 backdrop-blur-xl border-r border-border flex flex-col fixed left-0 top-0 hidden md:flex z-40">
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <div className={cn(
+        "w-64 h-screen bg-card/80 backdrop-blur-xl border-r border-border flex flex-col fixed left-0 top-0 z-50 transition-transform duration-300 md:translate-x-0 md:flex",
+        isOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
       <div className="p-6 flex items-center gap-3">
         <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
           <Dumbbell className="w-5 h-5 text-black" />
@@ -136,6 +148,6 @@ export function Sidebar() {
         </Popover>
       </div>
     </div>
-  );
+  </>
+);
 }
-

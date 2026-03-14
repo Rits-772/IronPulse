@@ -1,11 +1,14 @@
 import { Bell, Menu, Search } from "lucide-react";
 import { useState } from "react";
 
-export function Topbar() {
+export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   return (
     <header className="h-20 border-b border-border bg-background/50 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-30 ml-0 md:ml-64">
       <div className="flex items-center gap-4 md:hidden">
-        <button className="text-foreground p-2 hover:bg-secondary rounded-lg">
+        <button 
+          onClick={onMenuClick}
+          className="text-foreground p-2 hover:bg-secondary rounded-lg"
+        >
           <Menu className="w-6 h-6" />
         </button>
         <h1 className="text-xl font-display font-bold tracking-widest text-glow uppercase">

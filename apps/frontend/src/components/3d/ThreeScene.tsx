@@ -1,7 +1,7 @@
+import * as THREE from 'three';
 import { useRef, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Float, Sparkles, PerspectiveCamera } from '@react-three/drei';
-import type { Mesh, Group } from 'three';
 
 interface PlateProps {
   position: [number, number, number];
@@ -11,7 +11,7 @@ interface PlateProps {
 }
 
 function AbstractPlate({ position, rotation, scale = 1, color }: PlateProps) {
-  const mesh = useRef<Mesh>(null);
+  const mesh = useRef<THREE.Mesh>(null);
   return (
     <Float speed={1.5} rotationIntensity={1} floatIntensity={2}>
       <mesh ref={mesh} position={position} rotation={rotation} scale={scale}>
@@ -29,7 +29,7 @@ function AbstractPlate({ position, rotation, scale = 1, color }: PlateProps) {
 }
 
 function EnergyLines() {
-  const linesRef = useRef<Group>(null);
+  const linesRef = useRef<THREE.Group>(null);
   useFrame((state) => {
     if (linesRef.current) {
       linesRef.current.position.z = (state.clock.elapsedTime * 2) % 10;
@@ -70,9 +70,11 @@ function ScrollCamera() {
   }, []);
 
   useFrame(() => {
-    const targetZ = 8 - scrollRef.current * 6;
-    camera.position.z += (targetZ - camera.position.z) * 0.05;
-    camera.position.y += (scrollRef.current * 2 - camera.position.y) * 0.03;
+    const targetZ = 8 - scrollRef.current * 12;
+    const targetY = scrollRef.current * 4;
+    
+    camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.08);
+    camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.08);
   });
 
   return null;
@@ -80,7 +82,10 @@ function ScrollCamera() {
 
 export default function ThreeScene() {
   return (
-    <Canvas shadows gl={{ failIfMajorPerformanceCaveat: false }}>
+    <Canvas 
+      shadows={{ type: THREE.PCFShadowMap }} 
+      gl={{ failIfMajorPerformanceCaveat: false }}
+    >
       <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={50} />
       <ScrollCamera />
       <color attach="background" args={['#060608']} />

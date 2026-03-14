@@ -113,6 +113,25 @@ export default function LogWorkout() {
     { id: '1', name: "Barbell Squat", sets: [{ reps: "", weight: "" }] }
   ]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefillEx = params.get('exercises');
+    const prefillName = params.get('name');
+    
+    if (prefillEx) {
+      try {
+        const decoded = JSON.parse(decodeURIComponent(prefillEx));
+        setExercises(decoded);
+      } catch (e) {
+        console.error("Failed to parse prefill exercises", e);
+      }
+    }
+    
+    if (prefillName) {
+      setWorkoutName(decodeURIComponent(prefillName).toUpperCase());
+    }
+  }, []);
+
   const addExercise = () => {
     setExercises([...exercises, { id: Math.random().toString(), name: "New Exercise", sets: [{ reps: "", weight: "" }] }]);
   };
@@ -188,10 +207,17 @@ export default function LogWorkout() {
                 value={workoutName}
                 onChange={(e) => setWorkoutName(e.target.value)}
                 placeholder="NAME THIS SESSION"
-                className="w-full bg-transparent border-none text-4xl md:text-5xl font-display font-black uppercase tracking-tight focus:outline-none focus:ring-0 placeholder:text-muted-foreground/30 text-glow"
+                className="w-full bg-transparent border-none text-4xl md:text-5xl font-display font-bold uppercase tracking-tight focus:outline-none focus:ring-0 placeholder:text-muted-foreground/30 focus:text-primary transition-colors"
               />
-              <div className="flex items-center gap-4 text-sm text-primary font-bold tracking-widest uppercase mt-2">
-                <span className="flex items-center gap-1"><Dumbbell className="w-4 h-4" /> 0 LBS</span>
+              <div className="flex items-center gap-4 text-[10px] text-primary font-bold tracking-[0.2em] uppercase mt-2">
+                <span className="flex items-center gap-1.5 opacity-60">
+                  <Dumbbell className="w-3 h-3" /> 
+                  {exercises.reduce((total, ex) => 
+                         total + ex.sets.reduce((exTotal, s) => 
+                           exTotal + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0
+                         ), 0
+                       ).toLocaleString()} LBS DISPLACED
+                </span>
               </div>
             </div>
             <button 
@@ -212,7 +238,13 @@ export default function LogWorkout() {
               <div className="space-y-4">
                  <div className="flex justify-between items-center">
                     <span className="text-xs text-muted-foreground uppercase tracking-wider">Total Volume</span>
-                    <span className="font-mono text-primary font-bold">0 LBS</span>
+                    <span className="font-mono text-primary font-bold tracking-tighter">
+                       {exercises.reduce((total, ex) => 
+                         total + ex.sets.reduce((exTotal, s) => 
+                           exTotal + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0
+                         ), 0
+                       ).toLocaleString()} LBS
+                    </span>
                  </div>
                  <div className="flex justify-between items-center">
                     <span className="text-xs text-muted-foreground uppercase tracking-wider">Total Sets</span>
@@ -305,14 +337,14 @@ export default function LogWorkout() {
               </motion.div>
             ))}
           </AnimatePresence>
+          
+          <button 
+            onClick={addExercise}
+            className="w-full mt-6 py-4 bg-secondary/30 text-foreground/80 font-display font-bold text-xl uppercase tracking-[0.2em] rounded-xl hover:bg-secondary/50 hover:text-white transition-all border border-white/5 flex items-center justify-center gap-2 group"
+          >
+            <Plus className="w-6 h-6 text-primary group-hover:scale-125 transition-transform" /> Add Exercise Parameter
+          </button>
         </div>
-
-        <button 
-          onClick={addExercise}
-          className="w-full mt-6 py-4 bg-secondary/50 text-foreground font-display font-bold text-xl uppercase tracking-widest rounded-xl hover:bg-secondary transition-all border border-white/5 flex items-center justify-center gap-2 group"
-        >
-          <Plus className="w-6 h-6 text-primary group-hover:scale-125 transition-transform" /> Add Exercise Parameter
-        </button>
       </div>
     </DashboardLayout>
   );

@@ -458,6 +458,7 @@ export interface Routine {
   id: string;
   name: string;
   exercises: string[];
+  created_at?: string;
 }
 
 export function useRoutines() {
@@ -477,7 +478,8 @@ export function useRoutines() {
       return data.map((r: any) => ({
         id: r.id,
         name: r.name,
-        exercises: r.exercises || []
+        exercises: r.exercises || [],
+        created_at: r.created_at
       })) as Routine[];
     },
     enabled: !!user
@@ -602,7 +604,7 @@ export function usePersonalRecords() {
         .from('workout_exercises')
         .select(`
           weight,
-          exercise_name,
+          exercises (name),
           workout_sessions!inner(user_id)
         `)
         .eq('workout_sessions.user_id', user.id);
@@ -611,7 +613,7 @@ export function usePersonalRecords() {
 
       const records: Record<string, number> = {};
       data.forEach((row: any) => {
-        const name = row.exercise_name;
+        const name = row.exercises?.name || 'Unknown Exercise';
         const weight = parseFloat(row.weight);
         if (!records[name] || weight > records[name]) {
           records[name] = weight;

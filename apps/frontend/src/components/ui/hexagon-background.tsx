@@ -47,24 +47,24 @@ function HexagonBackground({
     <div
       data-slot="hexagon-background"
       className={cn(
-        'relative size-full overflow-hidden bg-background',
+        'absolute inset-0 overflow-hidden bg-background -z-10',
         className,
       )}
       {...props}
     >
       <style>{`:root { --hexagon-margin: ${hexagonMargin}px; }`}</style>
-      <div className="absolute top-0 -left-0 size-full overflow-hidden pointer-events-none opacity-20">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
         {Array.from({ length: gridDimensions.rows }).map((_, rowIndex) => (
           <div
             key={`row-${rowIndex}`}
             style={{
-              marginTop: computedMarginTop,
+              marginTop: rowIndex === 0 ? 0 : computedMarginTop,
               marginLeft:
                 ((rowIndex + 1) % 2 === 0
                   ? evenRowMarginLeft
-                  : oddRowMarginLeft) - 10,
+                  : oddRowMarginLeft),
             }}
-            className="inline-flex"
+            className="flex whitespace-nowrap"
           >
             {Array.from({ length: gridDimensions.columns }).map(
               (_, colIndex) => (
@@ -78,7 +78,7 @@ function HexagonBackground({
                     ...hexagonProps?.style,
                   }}
                   className={cn(
-                    'relative',
+                    'relative flex-shrink-0',
                     '[clip-path:polygon(50%_0%,_100%_25%,_100%_75%,_50%_100%,_0%_75%,_0%_25%)]',
                     "before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-full before:bg-white/5 before:transition-all before:duration-1000",
                     "after:content-[''] after:absolute after:inset-[var(--hexagon-margin)] after:bg-background",
@@ -92,9 +92,7 @@ function HexagonBackground({
           </div>
         ))}
       </div>
-      <div className="relative z-10 w-full h-full">
-        {children}
-      </div>
+      {children}
     </div>
   );
 }
