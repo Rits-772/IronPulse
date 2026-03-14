@@ -1,4 +1,4 @@
-import { DashboardLayout } from "../components/layout/DashboardLayout";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { User, Mail, Ruler, LogOut, Shield, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
