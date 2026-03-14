@@ -1,11 +1,11 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { cn } from "@/lib/utils";
-import { Plus, GripVertical, Settings2, Trash2, Loader2, Search, Filter, ChevronRight, Dumbbell as DumbbellIcon, Target } from "lucide-react";
+import { Plus, GripVertical, Settings2, Trash2, Loader2, Search, Filter, ChevronRight, Dumbbell as DumbbellIcon, Target, ChevronUp, ChevronDown, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { useRoutines, useSaveRoutine, useDeleteRoutine } from "@/hooks/use-db-data";
+import { useRoutines, useSaveRoutine, useDeleteRoutine, useUpdateProfile, useCreatePost } from "@/hooks/use-db-data";
 
 const EXERCISE_DATABASE = {
   "Chest": ["Barbell Bench Press", "Incline Dumbbell Press", "Cable Fly", "Dumbbell Press", "Chest Press Machine"],
@@ -77,6 +77,40 @@ export default function Planner() {
     }
   };
 
+  const reorderExercise = async (routine: any, index: number, direction: 'up' | 'down') => {
+    const newExercises = [...routine.exercises];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= newExercises.length) return;
+    
+    [newExercises[index], newExercises[newIndex]] = [newExercises[newIndex], newExercises[index]];
+    
+    try {
+      await saveRoutine.mutateAsync({
+        ...routine,
+        exercises: newExercises
+      });
+    } catch (err: any) {
+      toast({ title: "Reorder failed", variant: "destructive" });
+    }
+  };
+
+  const createPostMutation = useCreatePost();
+  const shareRoutine = async (routine: any) => {
+    try {
+      await createPostMutation.mutateAsync({
+        content: `Sharing my training architecture: ${routine.name}. Targeted for operational efficiency.`,
+        type: 'ROUTINE',
+        routine_id: routine.id
+      });
+      toast({ 
+        title: "Sync Established", 
+        description: `${routine.name} published to The Grid.`,
+        className: "border-primary bg-background text-foreground"
+      });
+    } catch (err: any) {
+      toast({ title: "Sync Error", description: err.message, variant: "destructive" });
+    }
+  };
   const updateRoutineName = async (routine: any, newName: string) => {
     if (routine.name === newName) return;
     try {
@@ -216,6 +250,13 @@ export default function Planner() {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <button 
+                    onClick={() => shareRoutine(routine)}
+                    className="text-muted-foreground hover:text-primary opacity-40 group-hover:opacity-100 transition-opacity p-1"
+                    title="Publish to The Grid"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
                   <button onClick={() => deleteRoutine(routine.id)} className="text-muted-foreground hover:text-destructive opacity-40 group-hover:opacity-100 transition-opacity p-1">
                     {deleteRoutineMutation.isPending && deleteRoutineMutation.variables === routine.id ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -230,7 +271,26 @@ export default function Planner() {
                 {routine.exercises.map((ex, i) => (
                   <div key={i} className="flex flex-col gap-1 bg-background/40 backdrop-blur-sm border border-white/5 p-3 rounded-lg group/item hover:border-primary/20 transition-all">
                     <div className="flex items-center gap-3">
-                      <GripVertical className="w-3.5 h-3.5 text-white/5 group-hover/item:text-white/20" />
+                      <div className="flex flex-col -space-y-1">
+                        <button 
+                          onClick={() => reorderExercise(routine, i, 'up')}
+                          className={cn(
+                            "text-white/5 hover:text-primary transition-all p-0.5",
+                            i === 0 && "opacity-0 pointer-events-none"
+                          )}
+                        >
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => reorderExercise(routine, i, 'down')}
+                          className={cn(
+                            "text-white/5 hover:text-primary transition-all p-0.5",
+                            i === routine.exercises.length - 1 && "opacity-0 pointer-events-none"
+                          )}
+                        >
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                       <span className="font-bold font-sans text-xs tracking-tight">{ex}</span>
                       <button 
                         onClick={() => removeExerciseFromRoutine(routine, i)}

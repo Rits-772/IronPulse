@@ -628,3 +628,136 @@ export function usePersonalRecords() {
     enabled: !!user
   });
 }
+
+// --- COMMUNITY HOOKS ---
+
+export interface CommunityPost {
+  id: string;
+  user_id: string;
+  type: 'PROGRESS' | 'ROUTINE' | 'QUESTION' | 'GENERAL';
+  title?: string;
+  content: string;
+  image_url?: string;
+  routine_id?: string;
+  created_at: string;
+  profiles?: {
+    username: string;
+    full_name: string;
+    avatar_url?: string;
+    level: number;
+    xp: number;
+  };
+  likes_count: number;
+  comments_count: number;
+  user_has_liked: boolean;
+}
+
+export function usePosts(filter: string = "ALL") {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['posts', filter],
+    queryFn: async () => {
+      let query = supabase
+        .from('posts')
+        .select(`
+          *,
+          profiles:user_id (username, full_name, avatar_url, level, xp),
+          likes:likes(count),
+          comments:comments(count)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (filter !== "ALL") {
+        query = query.eq('type', filter);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Check if current user has liked each post
+      const posts = await Promise.all(data.map(async (p: any) => {
+        let user_has_liked = false;
+        if (user) {
+          const { data: like } = await supabase
+            .from('likes')
+            .select('*')
+            .eq('post_id', p.id)
+            .eq('user_id', user.id)
+            .maybeSingle();
+          user_has_liked = !!like;
+        }
+
+        return {
+          ...p,
+          likes_count: p.likes?.[0]?.count || 0,
+          comments_count: p.comments?.[0]?.count || 0,
+          user_has_liked
+        };
+      }));
+
+      return posts as CommunityPost[];
+    }
+  });
+}
+
+export function useCreatePost() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (post: Omit<CommunityPost, 'id' | 'user_id' | 'created_at' | 'likes_count' | 'comments_count' | 'user_has_liked'>) => {
+      if (!user) throw new Error('Auth required');
+      const { data, error } = await supabase
+        .from('posts')
+        .insert({
+          ...post,
+          user_id: user.id
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    }
+  });
+}
+
+export function useToggleLike() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ postId, hasLiked }: { postId: string, hasLiked: boolean }) => {
+      if (!user) throw new Error('Auth required');
+      
+      if (hasLiked) {
+        await supabase.from('likes').delete().eq('post_id', postId).eq('user_id', user.id);
+      } else {
+        await supabase.from('likes').insert({ post_id: postId, user_id: user.id });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    }
+  });
+}
+
+export function useTopOperatives() {
+  return useQuery({
+    queryKey: ['top-operatives'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('username, full_name, level, xp')
+        .order('xp', { ascending: false })
+        .limit(5);
+        
+      if (error) throw error;
+      return data;
+    }
+  });
+}

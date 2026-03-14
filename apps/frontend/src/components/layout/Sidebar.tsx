@@ -12,7 +12,8 @@ import {
   LogOut,
   Salad,
   MoreVertical,
-  ChevronUp
+  ChevronUp,
+  Users
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-db-data";
@@ -29,16 +30,33 @@ function LevelProgress({ xp }: { xp: number }) {
   const nextLevelXp = Math.pow(level, 2) * 100;
   const progress = ((xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
 
+  const getRankTier = (lvl: number) => {
+    if (lvl < 5) return "NEURAL INITIATE";
+    if (lvl < 15) return "PULSE OPERATIVE";
+    if (lvl < 30) return "KINETIC ENFORCER";
+    if (lvl < 50) return "SYNAPSE ELITE";
+    return "CYBERNETIC OVERLORD";
+  };
+
   return (
-    <div className="px-4 py-4 border-t border-border mt-2 space-y-2">
-      <div className="flex justify-between items-end mb-1">
-        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Neural Rank</div>
-        <div className="text-xs font-display font-bold text-primary italic">LVL {level}</div>
+    <div className="px-3 py-4 border-t border-white/5 mt-2 space-y-3 bg-primary/5 rounded-xl border border-primary/10 mx-2">
+      <div className="flex justify-between items-end">
+        <div>
+          <div className="text-[8px] font-bold text-primary/60 uppercase tracking-[0.2em] mb-0.5">Neural Rank</div>
+          <div className="text-[10px] font-display font-black text-foreground tracking-widest">{getRankTier(level)}</div>
+        </div>
+        <div className="text-xl font-display font-black text-primary italic text-glow leading-none">LVL {level}</div>
       </div>
-      <Progress value={progress} className="h-1 bg-white/5" indicatorClassName="bg-primary shadow-[0_0_10px_#39FF14]" />
-      <div className="flex justify-between text-[8px] font-mono text-muted-foreground uppercase tracking-tighter">
-        <span>{xp} XP</span>
-        <span>{nextLevelXp} XP</span>
+      
+      <div className="space-y-1.5">
+        <Progress value={progress} className="h-1.5 bg-white/5 border border-white/5" indicatorClassName="bg-primary shadow-[0_0_15px_#39FF14] transition-all duration-1000" />
+        <div className="flex justify-between text-[7px] font-mono text-muted-foreground uppercase tracking-[0.1em]">
+          <span className="flex items-center gap-1 group/xp">
+             <span className="text-primary font-bold">{xp.toLocaleString()}</span> 
+             <span className="opacity-40 group-hover/xp:opacity-100 transition-opacity">DATA POINTS</span>
+          </span>
+          <span className="opacity-40">{nextLevelXp.toLocaleString()} XP FOR SYNC</span>
+        </div>
       </div>
     </div>
   );
@@ -52,6 +70,7 @@ const navItems = [
   { name: "Nutrition Matrix", href: "/nutrition", icon: Salad },
   { name: "Body Metrics", href: "/body-metrics", icon: Activity },
   { name: "Workout Planner", href: "/planner", icon: CalendarDays },
+  { name: "Community Hub", href: "/community", icon: Users },
 ];
 
 export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
@@ -108,8 +127,8 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
         })}
       </nav>
 
-      <div className="p-4 border-t border-border mt-auto">
-        {profile && <LevelProgress xp={profile.xp} />}
+      <div className="p-2 border-t border-border mt-auto bg-card/40">
+        {profile && <LevelProgress xp={profile.xp || 0} />}
         <Popover>
           <PopoverTrigger asChild>
             <button className="w-full mt-2 flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-secondary/50 transition-all group border border-transparent hover:border-white/5">

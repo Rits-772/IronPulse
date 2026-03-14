@@ -15,6 +15,7 @@ import Analytics from "@/pages/analytics";
 import Nutrition from "@/pages/nutrition";
 import BodyMetrics from "@/pages/body-metrics";
 import Planner from "@/pages/planner";
+import Community from "@/pages/community";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 
@@ -51,6 +52,9 @@ function Router() {
       </Route>
       <Route path="/settings">
         <ProtectedRoute><Settings /></ProtectedRoute>
+      </Route>
+      <Route path="/community">
+        <ProtectedRoute><Community /></ProtectedRoute>
       </Route>
       
       <Route component={NotFound} />
