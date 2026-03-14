@@ -1,10 +1,11 @@
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { DashboardLayout } from "../components/layout/DashboardLayout";
 import { User, Mail, Ruler, LogOut, Shield, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile, useUpdateProfile } from "@/hooks/use-db-data";
 import { useAuth } from "@/hooks/use-auth";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -38,9 +39,9 @@ export default function Settings() {
       const payload = {
         username: formData.username.trim() || undefined,
         full_name: formData.full_name.trim() || undefined,
-        height_cm: formData.height_cm ? parseInt(formData.height_cm) : null,
-        weight_goal: formData.weight_goal ? parseFloat(formData.weight_goal) : null,
-        body_fat_goal: formData.body_fat_goal ? parseFloat(formData.body_fat_goal) : null,
+        height_cm: formData.height_cm ? parseInt(formData.height_cm) : undefined,
+        weight_goal: formData.weight_goal ? parseFloat(formData.weight_goal) : undefined,
+        body_fat_goal: formData.body_fat_goal ? parseFloat(formData.body_fat_goal) : undefined,
         avatar_url: profile?.avatar_url // Keep existing for now unless changed
       };
 
