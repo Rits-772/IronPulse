@@ -35,15 +35,15 @@ export default function Landing() {
 
       <section className="relative min-h-screen flex items-center justify-center px-6 pt-20">
         <motion.div style={{ y: heroY, opacity: heroOpacity }} className="max-w-4xl mx-auto text-center z-10">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }}>
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1, ease: "easeOut" }}>
             <div className="inline-block px-4 py-1.5 rounded-full border border-primary/30 bg-primary/10 text-primary font-bold tracking-widest uppercase text-sm mb-6 box-glow">
               Elite Performance Analytics
             </div>
-            <h1 className="text-6xl md:text-8xl font-display font-black uppercase leading-[0.9] tracking-tighter mb-6">
+            <h1 className="text-6xl md:text-8xl font-display font-black uppercase leading-[0.9] tracking-tighter mb-6 text-glow">
               Track Like A <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Machine</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground font-sans max-w-2xl mx-auto mb-10 leading-relaxed">
+            <p className="text-lg md:text-xl text-muted-foreground font-sans max-w-2xl mx-auto mb-10 leading-relaxed drop-shadow-lg">
               Step into the future of strength training. IronPulse merges raw iron with cyberpunk analytics to give you absolute control over your physical evolution.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -59,13 +59,13 @@ export default function Landing() {
         <div className="absolute bottom-0 w-full h-32 bg-gradient-to-t from-background to-transparent z-10" />
       </section>
 
-      <section className="relative z-20 bg-background py-32 px-6">
+      <section className="relative z-20 bg-transparent py-32 px-6">
         <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true }} className="max-w-5xl mx-auto text-center">
           <motion.div variants={fadeUp}>
-            <h2 className="text-4xl md:text-5xl font-display font-bold uppercase tracking-widest mb-6">
+            <h2 className="text-4xl md:text-5xl font-display font-bold uppercase tracking-widest mb-6 text-glow">
               The <span className="text-primary">Operating System</span> For Your Body
             </h2>
-            <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto leading-relaxed mb-16">
+            <p className="text-muted-foreground text-lg md:text-xl max-w-3xl mx-auto leading-relaxed mb-16 px-4 py-2 rounded-xl backdrop-blur-[2px] bg-black/10 border border-white/5">
               IronPulse is not another workout tracker. It is a performance intelligence platform built for athletes who treat training like engineering. Every metric measured. Every pattern surfaced. Every plateau dismantled.
             </p>
           </motion.div>
@@ -76,8 +76,8 @@ export default function Landing() {
               { value: "98%", label: "Retention Rate" },
               { value: "4.9", label: "App Store Rating" },
             ].map((stat, i) => (
-              <div key={i} className="text-center">
-                <div className="text-4xl md:text-5xl font-display font-black text-primary mb-2">{stat.value}</div>
+              <div key={i} className="text-center p-6 rounded-2xl bg-black/20 backdrop-blur-sm border border-white/5">
+                <div className="text-4xl md:text-5xl font-display font-black text-primary mb-2 text-glow-small">{stat.value}</div>
                 <div className="text-sm text-muted-foreground font-bold uppercase tracking-widest">{stat.label}</div>
               </div>
             ))}
@@ -85,7 +85,7 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      <section className="relative z-20 bg-background border-t border-white/5 py-32 px-6">
+      <section className="relative z-20 bg-transparent border-t border-white/5 py-32 px-6">
         <div className="max-w-7xl mx-auto">
           <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true }} className="text-center mb-20">
             <motion.div variants={fadeUp}>
@@ -105,7 +105,7 @@ export default function Landing() {
               <motion.div
                 key={idx}
                 variants={fadeUp}
-                className="bg-card/50 backdrop-blur-lg border border-white/5 p-8 rounded-2xl hover:border-primary/30 transition-colors group relative overflow-hidden"
+                className="bg-card/30 backdrop-blur-md border border-white/5 p-8 rounded-2xl hover:border-primary/30 transition-colors group relative overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="w-14 h-14 bg-secondary rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform relative z-10">
@@ -119,14 +119,14 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="relative z-20 bg-background border-t border-white/5 py-32 px-6">
+      <section className="relative z-20 bg-transparent border-t border-white/5 py-32 px-6">
         <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true }} className="max-w-6xl mx-auto">
           <motion.div variants={fadeUp} className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-display font-bold uppercase tracking-widest mb-4">Your <span className="text-primary">Command Center</span></h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">A dashboard built for athletes, not accountants. Every data point serves a purpose.</p>
           </motion.div>
-          <motion.div variants={fadeUp} className="relative rounded-2xl border border-white/10 overflow-hidden shadow-2xl shadow-primary/5">
-            <div className="bg-card p-6 md:p-8">
+          <motion.div variants={fadeUp} className="relative rounded-2xl border border-white/10 overflow-hidden shadow-2xl shadow-primary/5 backdrop-blur-xl">
+            <div className="bg-card/40 p-6 md:p-8">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 {[
                   { label: "WEEKLY VOLUME", value: "30,100 LBS", color: "text-primary" },
@@ -134,7 +134,7 @@ export default function Landing() {
                   { label: "SESSIONS/WEEK", value: "5 AVG", color: "text-accent" },
                   { label: "STRENGTH INDEX", value: "+12% MoM", color: "text-purple-400" },
                 ].map((stat, i) => (
-                  <div key={i} className="bg-secondary/50 rounded-xl p-4 border border-white/5">
+                  <div key={i} className="bg-secondary/40 rounded-xl p-4 border border-white/5 backdrop-blur-md">
                     <div className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">{stat.label}</div>
                     <div className={`text-xl md:text-2xl font-display font-bold ${stat.color}`}>{stat.value}</div>
                   </div>
@@ -144,13 +144,13 @@ export default function Landing() {
                 <div className="md:col-span-2 bg-secondary/30 rounded-xl p-4 border border-white/5 h-48 flex items-end">
                   <div className="flex items-end gap-1 w-full h-full pb-4">
                     {[65, 40, 80, 55, 90, 70, 95, 50, 85, 75, 60, 88].map((h, i) => (
-                      <div key={i} className="flex-1 bg-primary/80 rounded-t" style={{ height: `${h}%` }} />
+                      <div key={i} className="flex-1 bg-primary/80 rounded-t shadow-[0_0_10px_rgba(57,255,20,0.3)]" style={{ height: `${h}%` }} />
                     ))}
                   </div>
                 </div>
                 <div className="bg-secondary/30 rounded-xl p-4 border border-white/5 space-y-3">
                   {["Heavy Legs", "Upper Hypertrophy", "Push Day"].map((name, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-background/50 rounded-lg p-3">
+                    <div key={i} className="flex items-center gap-3 bg-background/40 backdrop-blur-sm rounded-lg p-3 border border-white/5">
                       <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center">
                         <Dumbbell className="w-4 h-4 text-primary" />
                       </div>
@@ -167,7 +167,7 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      <section className="relative z-20 bg-background border-t border-white/5 py-32 px-6">
+      <section className="relative z-20 bg-transparent border-t border-white/5 py-32 px-6">
         <motion.div variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true }} className="max-w-5xl mx-auto">
           <motion.div variants={fadeUp} className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-display font-bold uppercase tracking-widest mb-4">Battle-<span className="text-primary">Tested</span></h2>
@@ -197,7 +197,7 @@ export default function Landing() {
               <motion.div
                 key={idx}
                 variants={fadeUp}
-                className="bg-card border border-white/5 rounded-2xl p-8 relative overflow-hidden"
+                className="bg-card/40 backdrop-blur-md border border-white/5 rounded-2xl p-8 relative overflow-hidden"
               >
                 <div className="flex gap-1 mb-4">
                   {[...Array(testimonial.stars)].map((_, i) => (
@@ -206,7 +206,7 @@ export default function Landing() {
                 </div>
                 <p className="text-foreground/90 leading-relaxed mb-6 italic">"{testimonial.quote}"</p>
                 <div>
-                  <div className="font-display font-bold text-lg uppercase tracking-wider">{testimonial.name}</div>
+                  <div className="font-display font-bold text-lg uppercase tracking-wider text-glow-small">{testimonial.name}</div>
                   <div className="text-sm text-muted-foreground font-medium">{testimonial.role}</div>
                 </div>
               </motion.div>
@@ -215,7 +215,7 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      <section className="relative z-20 bg-background border-t border-white/5 py-32 px-6">
+      <section className="relative z-20 bg-transparent border-t border-white/5 py-32 px-6">
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }} className="max-w-3xl mx-auto text-center">
           <h2 className="text-4xl md:text-6xl font-display font-black uppercase tracking-tighter mb-6">
             Ready To <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">Evolve</span>?
@@ -229,7 +229,7 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      <footer className="relative z-20 bg-black border-t border-white/10 py-12 px-6">
+      <footer className="relative z-20 bg-black/80 backdrop-blur-xl border-t border-white/10 py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2 text-muted-foreground">
             <div className="w-4 h-4 bg-primary rounded-sm opacity-50" />

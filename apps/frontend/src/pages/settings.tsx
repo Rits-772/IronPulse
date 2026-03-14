@@ -35,22 +35,27 @@ export default function Settings() {
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await updateProfile.mutateAsync({
-        username: formData.username,
-        full_name: formData.full_name,
-        height_cm: parseInt(formData.height_cm) || 0,
-        weight_goal: parseFloat(formData.weight_goal) || 0,
-        body_fat_goal: parseFloat(formData.body_fat_goal) || 0
-      });
+      const payload = {
+        username: formData.username.trim() || undefined,
+        full_name: formData.full_name.trim() || undefined,
+        height_cm: formData.height_cm ? parseInt(formData.height_cm) : null,
+        weight_goal: formData.weight_goal ? parseFloat(formData.weight_goal) : null,
+        body_fat_goal: formData.body_fat_goal ? parseFloat(formData.body_fat_goal) : null,
+        avatar_url: profile?.avatar_url // Keep existing for now unless changed
+      };
+
+      await updateProfile.mutateAsync(payload);
+      
       toast({
         title: "Profile Updated",
         description: "System parameters successfully reconfigured.",
         className: "border-primary bg-background text-foreground",
       });
     } catch (err: any) {
+      console.error("Profile update error:", err);
       toast({
         title: "Update Failed",
-        description: err.message,
+        description: err.message || "An unexpected error occurred during matrix sync.",
         variant: "destructive"
       });
     }
@@ -58,6 +63,40 @@ export default function Settings() {
 
   const handleLogout = async () => {
     await signOut();
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/avatar.${fileExt}`;
+      
+      // Upsert avatar
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      await updateProfile.mutateAsync({ avatar_url: publicUrl });
+
+      toast({
+        title: "Avatar Decoded",
+        description: "Visual identity successfully updated.",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Upload Failed",
+        description: "Ensure 'avatars' storage bucket is created in Supabase.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -79,80 +118,100 @@ export default function Settings() {
             <h2 className="font-display font-bold text-2xl uppercase tracking-widest">Identity Matrix</h2>
           </div>
 
-          <form onSubmit={handleUpdate} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Username</label>
-                <input 
-                  type="text" 
-                  value={formData.username}
-                  onChange={(e) => setFormData({...formData, username: e.target.value})}
-                  className="w-full bg-background border border-white/5 rounded-lg px-4 py-3 font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                />
+          <div className="flex flex-col md:flex-row gap-8 mb-8">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-32 h-32 rounded-2xl bg-secondary border border-white/10 flex items-center justify-center overflow-hidden relative group">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-12 h-12 text-muted-foreground" />
+                )}
+                <div 
+                  onClick={() => document.getElementById('avatar-input')?.click()}
+                  className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                >
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Update</span>
+                </div>
+                <input type="file" id="avatar-input" className="hidden" accept="image/*" onChange={handleAvatarUpload} />
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Full Name</label>
-                <input 
-                  type="text" 
-                  value={formData.full_name}
-                  onChange={(e) => setFormData({...formData, full_name: e.target.value})}
-                  className="w-full bg-background border border-white/5 rounded-lg px-4 py-3 font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                />
-              </div>
+              <p className="text-[10px] font-mono text-muted-foreground uppercase">Avatar Neural Link</p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2"><Mail className="w-4 h-4"/> Email Address</label>
-              <input 
-                type="email" 
-                value={user?.email || ""} 
-                disabled
-                className="w-full bg-background/50 border border-white/5 rounded-lg px-4 py-3 font-mono text-muted-foreground outline-none transition-all cursor-not-allowed" 
-              />
-            </div>
+            <form onSubmit={handleUpdate} className="flex-1 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Username</label>
+                  <input 
+                    type="text" 
+                    value={formData.username}
+                    onChange={(e) => setFormData({...formData, username: e.target.value})}
+                    className="w-full bg-background border border-white/5 rounded-lg px-4 py-3 font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Full Name</label>
+                  <input 
+                    type="text" 
+                    value={formData.full_name}
+                    onChange={(e) => setFormData({...formData, full_name: e.target.value})}
+                    className="w-full bg-background border border-white/5 rounded-lg px-4 py-3 font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                  />
+                </div>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2"><Ruler className="w-4 h-4"/> Height (CM)</label>
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2"><Mail className="w-4 h-4"/> Email Address</label>
+                <input 
+                  type="email" 
+                  value={user?.email || ""} 
+                  disabled
+                  className="w-full bg-background/50 border border-white/5 rounded-lg px-4 py-3 font-mono text-muted-foreground outline-none transition-all cursor-not-allowed" 
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2"><Ruler className="w-4 h-4"/> Height (CM)</label>
+                  <input 
+                    type="number" 
+                    value={formData.height_cm}
+                    onChange={(e) => setFormData({...formData, height_cm: e.target.value})}
+                    className="w-full bg-background border border-white/5 rounded-lg px-4 py-3 font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">Target Weight (KG)</label>
+                  <input 
+                    type="number" 
+                    value={formData.weight_goal}
+                    onChange={(e) => setFormData({...formData, weight_goal: e.target.value})}
+                    className="w-full bg-background border border-white/5 rounded-lg px-4 py-3 font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">Body Fat Goal (%)</label>
                 <input 
                   type="number" 
-                  value={formData.height_cm}
-                  onChange={(e) => setFormData({...formData, height_cm: e.target.value})}
-                  className="w-full bg-background border border-white/5 rounded-lg px-4 py-3 font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
+                  value={formData.body_fat_goal}
+                  onChange={(e) => setFormData({...formData, body_fat_goal: e.target.value})}
+                  className="w-full md:w-1/2 bg-background border border-white/5 rounded-lg px-4 py-3 font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">Target Weight (KG)</label>
-                <input 
-                  type="number" 
-                  value={formData.weight_goal}
-                  onChange={(e) => setFormData({...formData, weight_goal: e.target.value})}
-                  className="w-full bg-background border border-white/5 rounded-lg px-4 py-3 font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-                />
+
+              <div className="pt-6">
+                <button 
+                  type="submit" 
+                  disabled={updateProfile.isPending}
+                  className="bg-primary text-black px-8 py-3 rounded-lg font-bold uppercase tracking-widest hover:bg-primary/90 transition-all box-glow flex items-center gap-2"
+                >
+                  {updateProfile.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Apply Changes
+                </button>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">Body Fat Goal (%)</label>
-              <input 
-                type="number" 
-                value={formData.body_fat_goal}
-                onChange={(e) => setFormData({...formData, body_fat_goal: e.target.value})}
-                className="w-full md:w-1/2 bg-background border border-white/5 rounded-lg px-4 py-3 font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" 
-              />
-            </div>
-
-            <div className="pt-6">
-              <button 
-                type="submit" 
-                disabled={updateProfile.isPending}
-                className="bg-primary text-black px-8 py-3 rounded-lg font-bold uppercase tracking-widest hover:bg-primary/90 transition-all box-glow flex items-center gap-2"
-              >
-                {updateProfile.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                Apply Changes
-              </button>
-            </div>
-          </form>
+            </form>
+          </div>
         </motion.div>
 
         {/* Security & Danger Zone */}

@@ -20,6 +20,7 @@ export type WorkoutExercise = {
   reps: number;
   weight: number;
   exercise_name?: string; // Joined field
+  muscle_group?: string; // Joined field
 };
 
 export type BodyMetric = {
@@ -32,6 +33,62 @@ export type BodyMetric = {
   arms_cm: number;
   recorded_at: string;
 };
+
+// --- Oracle Analytics Helpers ---
+
+/**
+ * Calculates Estimated 1RM using Brzycki Formula
+ * 1RM = Weight / (1.0278 - (0.0278 * Reps))
+ */
+export function calculate1RM(weight: number, reps: number): number {
+  if (reps === 1) return weight;
+  if (reps === 0) return 0;
+  return weight / (1.0278 - (0.0278 * reps));
+}
+
+/**
+ * Calculates Muscle Group Distribution (Heatmap)
+ * Returns weight distribution across muscle groups
+ */
+export function useMuscleDistribution() {
+  const { user } = useAuth();
+  
+  return useQuery({
+    queryKey: ['muscle-distribution', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('workout_sessions')
+        .select(`
+          workout_exercises (
+            weight,
+            sets,
+            reps,
+            exercises (muscle_group)
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      const distribution: Record<string, number> = {};
+      data.forEach(session => {
+        session.workout_exercises.forEach((we: any) => {
+          const muscle = we.exercises?.muscle_group || 'Other';
+          const volume = we.weight * we.sets * we.reps;
+          distribution[muscle] = (distribution[muscle] || 0) + volume;
+        });
+      });
+
+      return Object.entries(distribution).map(([name, value]) => ({
+        name: name.toUpperCase(),
+        value
+      })).sort((a, b) => b.value - a.value);
+    },
+    enabled: !!user
+  });
+}
 
 // --- Hooks ---
 
@@ -66,7 +123,8 @@ export function useWorkouts() {
           name: we.exercises?.name || 'Unknown Exercise',
           sets: we.sets,
           reps: we.reps,
-          weight: we.weight
+          weight: we.weight,
+          muscle_group: we.exercises?.muscle_group
         })),
         volume: session.workout_exercises.reduce((acc: number, we: any) => acc + (we.sets * we.reps * we.weight), 0),
         duration: 60 // Mocking duration for now as it's not in schema
@@ -248,12 +306,31 @@ export function useSaveWorkout() {
         if (weError) throw weError;
       }
 
-      return session;
+      // 3. Award XP
+      const totalSets = exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
+      const xpEarned = 50 + (exercises.length * 10) + (totalSets * 5);
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('xp')
+        .eq('id', user.id)
+        .single();
+      
+      const newXp = (profile?.xp || 0) + xpEarned;
+      const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
+
+      await supabase
+        .from('profiles')
+        .update({ xp: newXp, level: newLevel })
+        .eq('id', user.id);
+
+      return { session, xpEarned, newLevel };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workouts'] });
       queryClient.invalidateQueries({ queryKey: ['activity'] });
       queryClient.invalidateQueries({ queryKey: ['progress'] });
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
     }
   });
 }
@@ -317,6 +394,17 @@ export interface Profile {
   height_cm: number;
   weight_goal?: number;
   body_fat_goal?: number;
+  avatar_url?: string;
+  xp: number;
+  level: number;
+}
+
+export function calculateLevel(xp: number) {
+  // Simple level logic: Level = 1 + floor(sqrt(xp / 100))
+  // 100 XP -> Level 2
+  // 400 XP -> Level 3
+  // 900 XP -> Level 4
+  return Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1;
 }
 
 export function useProfile() {

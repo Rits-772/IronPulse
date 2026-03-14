@@ -2,7 +2,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { motion, type Variants } from "framer-motion";
 import { Activity, Flame, TrendingUp, Weight, Play, Dumbbell, Trophy } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { useActivityData, useProgressData, useWorkouts, usePersonalRecords, useProfile, useMetricsData } from "@/hooks/use-db-data";
+import { useActivityData, useProgressData, useWorkouts, usePersonalRecords, useProfile, useMetricsData, useNutritionData } from "@/hooks/use-db-data";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 
@@ -75,6 +75,18 @@ export default function Dashboard() {
   const { data: workouts, isLoading: workoutsLoading } = useWorkouts();
   const { data: profile } = useProfile();
   const { data: metrics } = useMetricsData();
+  const { data: nutritionData } = useNutritionData();
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayNutrition = nutritionData?.find(n => n.date === todayStr) || { calories: 0, protein: 0, carbs: 0, fats: 0, water_ml: 0 };
+  
+  const calorieGoal = 2500; // Default goal
+  const proteinGoal = 180;
+  const waterGoal = 3000;
+
+  const calProgress = Math.min((todayNutrition.calories / calorieGoal) * 100, 100);
+  const proteinProgress = Math.min((todayNutrition.protein / proteinGoal) * 100, 100);
+  const waterProgress = Math.min((todayNutrition.water_ml / waterGoal) * 100, 100);
 
   const latestWeight = metrics && metrics.length > 0 ? metrics[metrics.length - 1].weight : 80;
   const latestBodyFat = metrics && metrics.length > 0 ? metrics[metrics.length - 1].bodyFat : 20;
@@ -109,6 +121,7 @@ export default function Dashboard() {
     { title: "Active Streak", value: streak.toString(), unit: "DAYS", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" },
     { title: "Sessions/Week", value: sessionsCount.toString(), unit: "AVG", icon: Activity, color: "text-accent", bg: "bg-accent/10" },
     { title: "Strength Index", value: "+12%", unit: "MoM", icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10" },
+    { title: "Neural Rank", value: `LVL ${profile?.level || 1}`, unit: `${profile?.xp || 0} XP`, icon: Trophy, color: "text-yellow-500", bg: "bg-yellow-500/10" },
   ];
 
   return (
@@ -199,7 +212,12 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
           className="bg-card border border-white/5 rounded-xl p-6"
         >
-          <h3 className="font-display font-bold text-xl uppercase tracking-widest mb-4">Neural Data Sync</h3>
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="font-display font-bold text-xl uppercase tracking-widest">Neural Data Sync</h3>
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+              <Activity className="w-4 h-4" />
+            </div>
+          </div>
           <div className="space-y-6">
             <GoalProgressBar 
               label="Weight Target" 
@@ -222,22 +240,48 @@ export default function Dashboard() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}
           className="bg-card border border-white/5 rounded-xl p-6"
         >
-          <h3 className="font-display font-bold text-xl uppercase tracking-widest mb-6">Weekly Pulse</h3>
-          <div className="h-40 w-full text-glow">
-            {activityLoading ? (
-              <div className="w-full h-full flex items-center justify-center"><Activity className="animate-spin text-primary" /></div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={activityData}>
-                  <XAxis dataKey="day" hide />
-                  <Tooltip 
-                    cursor={{fill: '#ffffff05'}}
-                    contentStyle={{ backgroundColor: '#050505', borderColor: '#222', borderRadius: '4px' }}
-                  />
-                  <Bar dataKey="workouts" fill="hsl(var(--primary))" radius={[2, 2, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="font-display font-bold text-xl uppercase tracking-widest">Fuel Status</h3>
+            <Link href="/nutrition" className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline">Manage Fuel</Link>
+          </div>
+          <div className="flex items-center gap-8">
+            <div className="w-32 h-32 relative flex items-center justify-center">
+               <svg className="w-full h-full -rotate-90">
+                <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-secondary/20" />
+                <motion.circle
+                  cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="8" fill="transparent"
+                  strokeDasharray={2 * Math.PI * 58}
+                  initial={{ strokeDashoffset: 2 * Math.PI * 58 }}
+                  animate={{ strokeDashoffset: 2 * Math.PI * 58 * (1 - calProgress / 100) }}
+                  className="text-primary"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span className="text-xl font-display font-bold tracking-tighter">{Math.round(calProgress)}%</span>
+                <span className="text-[8px] text-muted-foreground uppercase">Cals</span>
+              </div>
+            </div>
+            <div className="flex-1 space-y-4">
+               <div>
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-1 text-muted-foreground">
+                    <span>Protein</span>
+                    <span>{Math.round(proteinProgress)}%</span>
+                  </div>
+                  <div className="h-1 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-primary" style={{ width: `${proteinProgress}%` }} />
+                  </div>
+               </div>
+               <div>
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest mb-1 text-muted-foreground">
+                    <span>Hydration</span>
+                    <span>{todayNutrition.water_ml / 1000}L / {waterGoal / 1000}L</span>
+                  </div>
+                  <div className="h-1 bg-secondary rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500" style={{ width: `${waterProgress}%` }} />
+                  </div>
+               </div>
+            </div>
           </div>
         </motion.div>
       </div>

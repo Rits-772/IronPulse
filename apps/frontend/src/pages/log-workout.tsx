@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Plus, Save, Trash2, Dumbbell, Timer, Loader2, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useSaveWorkout } from "@/hooks/use-db-data";
+import { cn } from "@/lib/utils";
 
 function CounterInput({ value, onChange, placeholder, unit }: { value: string, onChange: (val: string) => void, placeholder: string, unit?: string }) {
   const current = parseFloat(value) || 0;
@@ -49,6 +50,59 @@ type ExerciseEntry = {
   name: string;
   sets: ExerciseSet[];
 };
+
+function RestTimer() {
+  const [time, setTime] = useState(0);
+  const [isActive, setIsActive] = useState(false);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isActive && time > 0) {
+      interval = setInterval(() => {
+        setTime((prev) => prev - 1);
+      }, 1000);
+    } else if (time === 0) {
+      setIsActive(false);
+    }
+    return () => clearInterval(interval);
+  }, [isActive, time]);
+
+  const startTimer = (seconds: number) => {
+    setTime(seconds);
+    setIsActive(true);
+  };
+
+  return (
+    <div className="bg-card border border-white/5 rounded-xl p-4 flex flex-col items-center gap-3">
+      <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em] mb-1">Rest Protocol</div>
+      <div className={cn(
+        "text-4xl font-display font-bold tracking-tighter transition-colors",
+        isActive ? "text-primary text-glow" : "text-muted-foreground"
+      )}>
+        {Math.floor(time / 60)}:{(time % 60).toString().padStart(2, '0')}
+      </div>
+      <div className="flex gap-2">
+        {[60, 90, 180].map((s) => (
+          <button 
+            key={s} 
+            onClick={() => startTimer(s)}
+            className="px-3 py-1 bg-secondary/50 border border-white/5 rounded text-[10px] font-bold uppercase hover:bg-primary hover:text-black transition-all"
+          >
+            {s}s
+          </button>
+        ))}
+        {isActive && (
+          <button 
+            onClick={() => setIsActive(false)}
+            className="px-3 py-1 bg-red-500/10 border border-red-500/20 text-red-500 rounded text-[10px] font-bold uppercase"
+          >
+            Stop
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function LogWorkout() {
   const { toast } = useToast();
@@ -125,31 +179,53 @@ export default function LogWorkout() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div className="w-full md:w-1/2">
-            <input 
-              type="text" 
-              value={workoutName}
-              onChange={(e) => setWorkoutName(e.target.value)}
-              placeholder="NAME THIS SESSION"
-              className="w-full bg-transparent border-none text-4xl md:text-5xl font-display font-black uppercase tracking-tight focus:outline-none focus:ring-0 placeholder:text-muted-foreground/30 text-glow"
-            />
-            <div className="flex items-center gap-4 text-sm text-primary font-bold tracking-widest uppercase mt-2">
-              <span className="flex items-center gap-1"><Timer className="w-4 h-4" /> 00:00:00</span>
-              <span className="flex items-center gap-1"><Dumbbell className="w-4 h-4" /> 0 LBS</span>
+      <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div className="w-full md:w-1/2">
+              <input 
+                type="text" 
+                value={workoutName}
+                onChange={(e) => setWorkoutName(e.target.value)}
+                placeholder="NAME THIS SESSION"
+                className="w-full bg-transparent border-none text-4xl md:text-5xl font-display font-black uppercase tracking-tight focus:outline-none focus:ring-0 placeholder:text-muted-foreground/30 text-glow"
+              />
+              <div className="flex items-center gap-4 text-sm text-primary font-bold tracking-widest uppercase mt-2">
+                <span className="flex items-center gap-1"><Dumbbell className="w-4 h-4" /> 0 LBS</span>
+              </div>
             </div>
+            <button 
+              onClick={handleSave}
+              disabled={saveWorkout.isPending}
+              className="bg-primary text-black px-8 py-3 rounded-lg font-display font-bold uppercase tracking-widest text-lg flex items-center gap-2 hover:bg-primary/90 transition-all box-glow shrink-0 w-full md:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saveWorkout.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Commit Log
+            </button>
           </div>
-          <button 
-            onClick={handleSave}
-            disabled={saveWorkout.isPending}
-            className="bg-primary text-black px-8 py-3 rounded-lg font-display font-bold uppercase tracking-widest text-lg flex items-center gap-2 hover:bg-primary/90 transition-all box-glow shrink-0 w-full md:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saveWorkout.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Commit Log
-          </button>
         </div>
 
-        <div className="space-y-6">
+        <div className="lg:col-span-4 lg:row-start-1 lg:row-end-3">
+          <div className="sticky top-8 space-y-6">
+            <RestTimer />
+            <div className="bg-card border border-white/5 rounded-xl p-6">
+              <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Session Telemetry</h4>
+              <div className="space-y-4">
+                 <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Total Volume</span>
+                    <span className="font-mono text-primary font-bold">0 LBS</span>
+                 </div>
+                 <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Total Sets</span>
+                    <span className="font-mono text-primary font-bold">
+                       {exercises.reduce((acc, e) => acc + e.sets.length, 0)}
+                    </span>
+                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-8 space-y-6">
           <AnimatePresence>
             {exercises.map((exercise, exerciseIdx) => (
               <motion.div 

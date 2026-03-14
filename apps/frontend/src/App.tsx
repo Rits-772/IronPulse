@@ -46,6 +46,9 @@ function Router() {
       <Route path="/planner">
         <ProtectedRoute><Planner /></ProtectedRoute>
       </Route>
+      <Route path="/nutrition">
+        <ProtectedRoute><Nutrition /></ProtectedRoute>
+      </Route>
       <Route path="/settings">
         <ProtectedRoute><Settings /></ProtectedRoute>
       </Route>
