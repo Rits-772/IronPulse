@@ -1,0 +1,15 @@
+packages:
+  "framer-motion": "For page transitions, scroll-triggered animations, and staggered dashboard reveals."
+  "recharts": "For rendering performance analytics, strength progression, and body metrics charts."
+  "three": "Core 3D library for the cinematic background."
+  "@react-three/fiber": "React renderer for Three.js to build the cinematic gym environment."
+  "@react-three/drei": "Useful helpers and abstractions for React Three Fiber (controls, environments, shapes)."
+  "clsx": "Utility for constructing className strings conditionally."
+  "tailwind-merge": "Utility function to efficiently merge Tailwind CSS classes in JS without style conflicts."
+
+images: []
+
+notes:
+  - "The application is completely local/mock state-driven for demonstration purposes."
+  - "We use framer-motion extensively for staggered UI entrances to give that 'premium performance' feel."
+  - "The 3D background is isolated to the landing page to preserve performance across data-heavy dashboard views."
