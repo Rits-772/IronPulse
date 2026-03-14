@@ -12,8 +12,7 @@ import {
   LogOut,
   Salad,
   MoreVertical,
-  ChevronUp,
-  Users
+  ChevronUp
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useProfile } from "@/hooks/use-db-data";
@@ -70,7 +69,6 @@ const navItems = [
   { name: "Nutrition Matrix", href: "/nutrition", icon: Salad },
   { name: "Body Metrics", href: "/body-metrics", icon: Activity },
   { name: "Workout Planner", href: "/planner", icon: CalendarDays },
-  { name: "Community Hub", href: "/community", icon: Users },
 ];
 
 export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
