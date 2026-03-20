@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Fingerprint, Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import GymScene from "@/components/3d/GymScene";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -39,8 +40,13 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-[#060608] flex items-center justify-center px-4 relative overflow-hidden font-rajdhani">
-      {/* Dynamic Background Effects */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
+      {/* Background Gym Scene (Mobile only) */}
+      <div className="fixed inset-0 z-0 pointer-events-none lg:hidden opacity-30">
+        <GymScene />
+      </div>
+
+      {/* Dynamic Background Effects (Desktop/Fallback) */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30 z-0">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
       </div>

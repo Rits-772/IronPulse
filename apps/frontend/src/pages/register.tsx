@@ -4,11 +4,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Fingerprint, Mail, Lock, User, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import GymScene from "@/components/3d/GymScene";
 
 export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { verifyOtp, supabase } = useAuth() as any; // Using supabase directly for signup
+  const { signUp, verifyOtp } = useAuth();
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -22,13 +23,9 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
 
-    const { data, error } = await (supabase as any).auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: name,
-        },
+    const { error } = await signUp(email, password, {
+      data: {
+        full_name: name,
       },
     });
 
@@ -75,8 +72,13 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-[#060608] flex items-center justify-center px-4 relative overflow-hidden font-rajdhani">
+      {/* Background Gym Scene (Mobile only) */}
+      <div className="fixed inset-0 z-0 pointer-events-none lg:hidden opacity-30">
+        <GymScene />
+      </div>
+
       {/* Dynamic Background Effects */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30 z-0">
         <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px]" />
       </div>
