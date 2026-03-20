@@ -7,10 +7,9 @@ type AuthContextType = {
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
-  signInWithGithub: () => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<{ error: any }>;
   signInWithOtp: (email: string) => Promise<{ error: any }>;
-  verifyOtp: (email: string, token: string) => Promise<{ error: any }>;
+  verifyOtp: (email: string, token: string, type: 'email' | 'signup') => Promise<{ error: any }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,20 +39,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
-  const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
-  };
-
-  const signInWithGithub = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.origin } });
+  const signInWithPassword = async (email: string, password: string) => {
+    return await supabase.auth.signInWithPassword({ email, password });
   };
 
   const signInWithOtp = async (email: string) => {
     return await supabase.auth.signInWithOtp({ email });
   };
 
-  const verifyOtp = async (email: string, token: string) => {
-    return await supabase.auth.verifyOtp({ email, token, type: 'email' });
+  const verifyOtp = async (email: string, token: string, type: 'email' | 'signup' = 'email') => {
+    return await supabase.auth.verifyOtp({ email, token, type });
   };
 
   return (
@@ -62,8 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session, 
       loading, 
       signOut, 
-      signInWithGoogle, 
-      signInWithGithub, 
+      signInWithPassword,
       signInWithOtp, 
       verifyOtp 
     }}>

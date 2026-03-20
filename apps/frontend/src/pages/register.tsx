@@ -1,33 +1,28 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Dumbbell } from "lucide-react";
-import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/use-auth";
+import { Loader2, Fingerprint, Mail, Lock, User, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { verifyOtp, supabase } = useAuth() as any; // Using supabase directly for signup
+  
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<"details" | "verify">("details");
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      toast({
-        title: "Registration Error",
-        description: "Passcodes do not match.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setLoading(true);
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const { data, error } = await (supabase as any).auth.signUp({
       email,
       password,
       options: {
@@ -37,115 +32,207 @@ export default function Register() {
       },
     });
 
-    if (authError) {
+    if (error) {
       toast({
-        title: "Registration Failed",
-        description: authError.message,
+        title: "Initialization Failed",
+        description: error.message,
         variant: "destructive",
       });
       setLoading(false);
-      return;
+    } else {
+      // If Supabase is configured to confirm emails, it sends an OTP.
+      // We switch to the verify step.
+      setStep("verify");
+      toast({
+        title: "Phase I Complete",
+        description: "Verification sequence transmitted to your email vector.",
+      });
+      setLoading(false);
     }
+  };
 
-    // Usually Supabase triggers or a separate call creates a users profile table entry.
-    // If the tables are already made, we might need to manually insert into a 'users' or 'profiles' table if it exists.
-    // Assuming the user has a trigger set up for now, or just auth is enough for MVP.
-    
-    toast({
-      title: "Success",
-      description: "Subject initialized. Welcome to IronPulse.",
-    });
-    setLocation("/dashboard");
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const { error } = await verifyOtp(email, otp, 'signup');
+
+    if (error) {
+      toast({
+        title: "Link Terminated",
+        description: "Invalid or expired sequence. Verify and retry.",
+        variant: "destructive",
+      });
+      setLoading(false);
+    } else {
+      toast({
+        title: "Neural Sync Complete",
+        description: "Welcome to the IronPulse network, operative.",
+      });
+      setLocation("/dashboard");
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 relative overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none opacity-10"
-        style={{
-          backgroundImage: 'linear-gradient(rgba(0, 212, 255, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 212, 255, 0.2) 1px, transparent 1px)',
-          backgroundSize: '40px 40px',
-          transform: 'perspective(500px) rotateX(60deg) translateY(-100px) translateZ(-200px)',
-        }}
-      />
+    <div className="min-h-screen bg-[#060608] flex items-center justify-center px-4 relative overflow-hidden font-rajdhani">
+      {/* Dynamic Background Effects */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30">
+        <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px]" />
+      </div>
 
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md bg-card/80 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl z-10"
+        className="w-full max-w-md bg-card/40 backdrop-blur-2xl border border-white/5 p-10 rounded-[2rem] shadow-2xl z-10 relative overflow-hidden"
       >
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-accent rounded flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(0,212,255,0.5)]">
-            <Dumbbell className="w-6 h-6 text-black" />
-          </div>
-          <h1 className="text-3xl font-display font-bold uppercase tracking-widest text-glow-accent">New <span className="text-accent">Subject</span></h1>
-          <p className="text-muted-foreground mt-2 text-sm uppercase tracking-wider">Register physical parameters</p>
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+        
+        <div className="flex flex-col items-center mb-10">
+          <motion.div 
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-6 border border-accent/20 shadow-[0_0_20px_rgba(0,212,255,0.1)]"
+          >
+            <ShieldCheck className="w-8 h-8 text-accent" />
+          </motion.div>
+          <h1 className="text-3xl font-display font-black uppercase tracking-[0.2em] text-white">Create<span className="text-accent tracking-tighter ml-2">Identity</span></h1>
+          <p className="text-muted-foreground mt-2 text-[10px] font-bold uppercase tracking-[0.4em] opacity-60 italic">Operative Registration Protocol</p>
         </div>
 
-        <form className="space-y-5" onSubmit={handleRegister}>
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Designation</label>
-            <input 
-              type="text" 
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-secondary border border-white/5 rounded-lg px-4 py-3 text-foreground focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono text-sm"
-              placeholder="Display Name"
-              disabled={loading}
-            />
-          </div>
+        <AnimatePresence mode="wait">
+          {step === "details" ? (
+            <motion.form 
+              key="details-step"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="space-y-5" 
+              onSubmit={handleRegister}
+            >
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] ml-1">Designation</label>
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-accent transition-colors" />
+                  <input 
+                    type="text" 
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-black/40 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/50 transition-all font-mono text-sm placeholder:text-muted-foreground/20"
+                    placeholder="OPERATIVE NAME"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Email Vector</label>
-            <input 
-              type="email" 
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-secondary border border-white/5 rounded-lg px-4 py-3 text-foreground focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono text-sm"
-              placeholder="athlete@ironpulse.net"
-              disabled={loading}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Passcode</label>
-            <input 
-              type="password" 
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-secondary border border-white/5 rounded-lg px-4 py-3 text-foreground focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono text-sm"
-              placeholder="••••••••"
-              disabled={loading}
-            />
-          </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] ml-1">Email Vector</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-accent transition-colors" />
+                  <input 
+                    type="email" 
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-black/40 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/50 transition-all font-mono text-sm placeholder:text-muted-foreground/20"
+                    placeholder="ENTER EMAIL VECTOR"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Confirm Passcode</label>
-            <input 
-              type="password" 
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full bg-secondary border border-white/5 rounded-lg px-4 py-3 text-foreground focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono text-sm"
-              placeholder="••••••••"
-              disabled={loading}
-            />
-          </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] ml-1">Passcode</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-accent transition-colors" />
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-black/40 border border-white/5 rounded-2xl pl-12 pr-12 py-4 text-white focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/50 transition-all font-mono text-sm placeholder:text-muted-foreground/20"
+                    placeholder="••••••••"
+                    disabled={loading}
+                  />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
 
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 bg-accent text-black font-display font-bold text-xl uppercase tracking-widest rounded-lg hover:bg-accent/90 transition-all shadow-[0_0_15px_rgba(0,212,255,0.3)] mt-6 flex items-center justify-center gap-2"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Initialize Profile"}
-          </button>
-        </form>
+              <button 
+                type="submit"
+                disabled={loading}
+                className="w-full py-5 bg-accent text-black font-display font-black text-lg uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(0,212,255,0.15)] flex items-center justify-center gap-3 group relative overflow-hidden mt-4"
+              >
+                <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 skew-x-[-20deg]" />
+                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : (
+                  <>
+                    INITIALIZE <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
+              </button>
+            </motion.form>
+          ) : (
+            <motion.form 
+              key="verify-step"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6" 
+              onSubmit={handleVerifyOtp}
+            >
+              <div className="space-y-2 text-center mb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold uppercase tracking-widest mb-2">
+                  <Fingerprint className="w-3 h-3" /> Step II: Verification
+                </div>
+                <p className="text-xs text-muted-foreground italic">Code dispatched to vector: <span className="text-white font-mono">{email}</span></p>
+              </div>
 
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          Existing subject? <Link href="/login" className="text-accent font-bold hover:underline">Authenticate</Link>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] text-center block">Access Token</label>
+                <input 
+                  type="text" 
+                  maxLength={6}
+                  required
+                  autoFocus
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  className="w-full bg-black/40 border border-white/5 rounded-2xl py-5 text-center text-4xl font-display font-black tracking-[0.5em] text-accent focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/50 transition-all placeholder:text-muted-foreground/10"
+                  placeholder="000000"
+                  disabled={loading}
+                />
+              </div>
+
+              <button 
+                type="submit"
+                disabled={loading}
+                className="w-full py-5 bg-accent text-black font-display font-black text-lg uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(0,212,255,0.15)] flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : "VERIFY UPLINK"}
+              </button>
+
+              <button 
+                type="button"
+                onClick={() => setStep("details")}
+                className="w-full text-[10px] font-bold text-muted-foreground uppercase tracking-widest hover:text-accent transition-colors text-center"
+              >
+                ← Return to Base
+              </button>
+            </motion.form>
+          )}
+        </AnimatePresence>
+
+        <div className="mt-10 text-center">
+          <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-[0.2em]">
+            Existing operative? 
+            <Link href="/login" className="text-accent hover:underline border-b border-accent/20 pb-0.5 ml-1 transition-all">Authenticate</Link>
+          </p>
         </div>
       </motion.div>
     </div>
