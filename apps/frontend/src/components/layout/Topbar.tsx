@@ -4,13 +4,14 @@ import { useState } from "react";
 export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   return (
     <header className="h-20 border-b border-border bg-background/50 backdrop-blur-md flex items-center justify-between px-6 sticky top-0 z-30 ml-0 md:ml-64">
-      <div className="flex items-center gap-4 md:hidden">
+      <div className="flex items-center gap-3 md:hidden">
         <button 
           onClick={onMenuClick}
-          className="text-foreground p-2 hover:bg-secondary rounded-lg"
+          className="text-foreground p-2 hover:bg-secondary rounded-lg mr-1"
         >
           <Menu className="w-6 h-6" />
         </button>
+        <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain filter drop-shadow-[0_0_5px_rgba(57,255,20,0.5)]" />
         <h1 className="text-xl font-display font-bold tracking-widest text-glow uppercase">
           Iron<span className="text-primary">Pulse</span>
         </h1>

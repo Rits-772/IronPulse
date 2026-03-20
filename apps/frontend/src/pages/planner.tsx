@@ -5,15 +5,16 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { useRoutines, useSaveRoutine, useDeleteRoutine, useUpdateProfile } from "@/hooks/use-db-data";
+import { useRoutines, useSaveRoutine, useDeleteRoutine, useUpdateProfile, useSaveExercise } from "@/hooks/use-db-data";
 
-const EXERCISE_DATABASE = {
-  "Chest": ["Barbell Bench Press", "Incline Dumbbell Press", "Cable Fly", "Dumbbell Press", "Chest Press Machine"],
-  "Back": ["Deadlift", "Barbell Row", "Lat Pulldown", "Seated Row", "Pull Ups", "Face Pull"],
-  "Shoulders": ["Overhead Press", "Lateral Raise", "Front Raise", "Rear Delt Fly"],
-  "Legs": ["Barbell Squat", "Leg Press", "Romanian Deadlift", "Leg Extension", "Leg Curl", "Calf Raise"],
-  "Arms": ["Bicep Curl", "Hammer Curl", "Tricep Pushdown", "Skull Crusher", "Dips"],
-  "Core": ["Plank", "Crunch", "Leg Raise", "Russian Twist"]
+const EXERCISE_DATABASE: Record<string, string[]> = {
+  "Bodyweight": ["Pushups", "Pull Ups", "Air Squats", "Plank", "Dips", "Lunges", "Pike Pushups", "Diamond Pushups", "Burpees", "Mountain Climbers"],
+  "Chest": ["Barbell Bench Press", "Incline Dumbbell Press", "Cable Fly", "Dumbbell Press", "Chest Press Machine", "Pushups", "Decline Pushups"],
+  "Back": ["Deadlift", "Barbell Row", "Lat Pulldown", "Seated Row", "Pull Ups", "Face Pull", "Superman"],
+  "Shoulders": ["Overhead Press", "Lateral Raise", "Front Raise", "Rear Delt Fly", "Pike Pushups"],
+  "Legs": ["Barbell Squat", "Leg Press", "Romanian Deadlift", "Leg Extension", "Leg Curl", "Calf Raise", "Air Squats", "Lunges"],
+  "Arms": ["Bicep Curl", "Hammer Curl", "Tricep Pushdown", "Skull Crusher", "Dips", "Bench Dips"],
+  "Core": ["Plank", "Crunch", "Leg Raise", "Russian Twist", "Hollow Body Hold", "Mountain Climbers"]
 };
 
 export default function Planner() {
@@ -22,10 +23,16 @@ export default function Planner() {
   const { data: routines, isLoading } = useRoutines();
   const saveRoutine = useSaveRoutine();
   const deleteRoutineMutation = useDeleteRoutine();
+  const saveExercise = useSaveExercise();
 
   const [isAddingToRoutine, setIsAddingToRoutine] = useState<string | null>(null);
+  const [isCreatingExercise, setIsCreatingExercise] = useState(false);
+  const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseCategory, setNewExerciseCategory] = useState("Bodyweight");
+  
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>("Bodyweight");
+// ... remaining component logic
 
   const addRoutine = async () => {
     try {
@@ -56,8 +63,28 @@ export default function Planner() {
       });
       toast({ title: "Exercise added", description: `${exerciseName} added to ${routine.name}` });
       setIsAddingToRoutine(null);
+      setIsCreatingExercise(false);
     } catch (err: any) {
       toast({ title: "Failed to add", description: err.message, variant: "destructive" });
+    }
+  };
+
+  const handleCreateExercise = async () => {
+    if (!newExerciseName) {
+      toast({ title: "Invalid Input", description: "Exercise name required.", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      const routine = routines?.find(r => r.id === isAddingToRoutine);
+      if (routine) {
+        // For now, we add it directly to the routine. In a full impl, we'd save to exercises table too.
+        await addSpecificExercise(routine, newExerciseName);
+        setNewExerciseName("");
+        setIsCreatingExercise(false);
+      }
+    } catch (err: any) {
+      toast({ title: "Construction Failed", description: err.message, variant: "destructive" });
     }
   };
 
@@ -142,53 +169,100 @@ export default function Planner() {
               </button>
             </div>
 
-            <div className="p-4 bg-background/50 border-b border-white/5 flex gap-4">
+            <div className="p-4 bg-background/50 border-b border-white/5 flex gap-4 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input 
                   type="text" 
-                  placeholder="Scan database..." 
+                  placeholder={isCreatingExercise ? "Name your protocol..." : "Scan database..."} 
                   className="w-full bg-secondary/50 border border-white/5 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-primary/50 text-foreground"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={isCreatingExercise ? newExerciseName : searchQuery}
+                  onChange={(e) => isCreatingExercise ? setNewExerciseName(e.target.value) : setSearchQuery(e.target.value)}
                 />
               </div>
+              <button 
+                onClick={() => setIsCreatingExercise(!isCreatingExercise)}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all border",
+                  isCreatingExercise 
+                    ? "bg-rose-500/20 border-rose-500/50 text-rose-500 hover:bg-rose-500/30" 
+                    : "bg-primary/20 border-primary/50 text-primary hover:bg-primary/30"
+                )}
+              >
+                {isCreatingExercise ? "Cancel" : "Define New"}
+              </button>
             </div>
 
-            <div className="flex flex-1 overflow-hidden min-h-[400px]">
-              <div className="w-32 border-r border-white/5 bg-secondary/20 overflow-y-auto custom-scrollbar">
-                {Object.keys(EXERCISE_DATABASE).map(cat => (
-                  <button 
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={cn(
-                      "w-full px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest transition-all",
-                      selectedCategory === cat ? "bg-primary/20 text-primary border-r-2 border-primary" : "text-muted-foreground hover:bg-white/5"
-                    )}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-              <div className="flex-1 p-4 overflow-y-auto grid grid-cols-1 gap-2 custom-scrollbar">
-                {selectedCategory && (EXERCISE_DATABASE as any)[selectedCategory]
-                  .filter((ex: string) => ex.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map((ex: string) => (
-                    <button 
-                      key={ex}
-                      onClick={() => {
-                        const routine = routines?.find(r => r.id === isAddingToRoutine);
-                        if (routine) addSpecificExercise(routine, ex);
-                      }}
-                      className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 border border-white/5 hover:border-primary/30 hover:bg-secondary/60 transition-all group text-left"
+            {isCreatingExercise ? (
+              <div className="flex-1 p-8 flex flex-col items-center justify-center text-center space-y-6">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 group animate-pulse">
+                  <Target className="w-8 h-8 text-primary" />
+                </div>
+                <div className="max-w-md">
+                  <h3 className="text-xl font-display font-bold uppercase tracking-wider text-white">Custom Exercise Definition</h3>
+                  <p className="text-xs text-muted-foreground mt-2 uppercase tracking-widest font-sans">Assign a category to your new training module</p>
+                </div>
+                
+                <div className="flex flex-wrap justify-center gap-2 max-w-lg">
+                  {Object.keys(EXERCISE_DATABASE).map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setNewExerciseCategory(cat)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest border transition-all",
+                        newExerciseCategory === cat 
+                          ? "bg-primary text-black border-primary scale-110 shadow-[0_0_15px_rgba(57,255,20,0.3)]" 
+                          : "bg-white/5 border-white/10 text-muted-foreground hover:border-primary/50"
+                      )}
                     >
-                      <span className="font-sans font-bold text-sm tracking-wide">{ex}</span>
-                      <ChevronRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all" />
+                      {cat}
                     </button>
-                  ))
-                }
+                  ))}
+                </div>
+
+                <button 
+                  onClick={handleCreateExercise}
+                  className="px-10 py-3 bg-primary text-black font-display font-black uppercase tracking-[0.2em] rounded-lg box-glow hover:scale-105 transition-all text-xs"
+                >
+                  Confirm Definition
+                </button>
               </div>
-            </div>
+            ) : (
+              <div className="flex flex-1 overflow-hidden min-h-[400px]">
+                <div className="w-32 border-r border-white/5 bg-secondary/20 overflow-y-auto custom-scrollbar">
+                  {Object.keys(EXERCISE_DATABASE).map(cat => (
+                    <button 
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={cn(
+                        "w-full px-4 py-3 text-left text-[10px] font-bold uppercase tracking-widest transition-all",
+                        selectedCategory === cat ? "bg-primary/20 text-primary border-r-2 border-primary" : "text-muted-foreground hover:bg-white/5"
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex-1 p-4 overflow-y-auto grid grid-cols-1 gap-2 custom-scrollbar">
+                  {selectedCategory && (EXERCISE_DATABASE as any)[selectedCategory]
+                    .filter((ex: string) => ex.toLowerCase().includes(searchQuery.toLowerCase()))
+                    .map((ex: string) => (
+                      <button 
+                        key={ex}
+                        onClick={() => {
+                          const routine = routines?.find(r => r.id === isAddingToRoutine);
+                          if (routine) addSpecificExercise(routine, ex);
+                        }}
+                        className="flex items-center justify-between p-3 rounded-lg bg-secondary/40 border border-white/5 hover:border-primary/30 hover:bg-secondary/60 transition-all group text-left"
+                      >
+                        <span className="font-sans font-bold text-sm tracking-wide">{ex}</span>
+                        <ChevronRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-all" />
+                      </button>
+                    ))
+                  }
+                </div>
+              </div>
+            )}
           </motion.div>
         </div>
       )}

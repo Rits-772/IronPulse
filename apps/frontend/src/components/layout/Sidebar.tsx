@@ -91,8 +91,8 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
       <div className="p-6 flex items-center gap-3">
-        <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
-          <Dumbbell className="w-5 h-5 text-black" />
+        <div className="w-10 h-10 flex items-center justify-center">
+          <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_5px_rgba(57,255,20,0.5)]" />
         </div>
         <h1 className="text-2xl font-display font-bold tracking-widest text-foreground text-glow uppercase">
           Iron<span className="text-primary">Pulse</span>

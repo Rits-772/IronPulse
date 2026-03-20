@@ -14,13 +14,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <HexagonBackground 
       hexagonSize={100} 
       hexagonMargin={4}
-      className="min-h-screen flex"
+      className="min-h-screen flex relative"
     >
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
       <div className="flex-1 flex flex-col min-w-0 relative z-10 overflow-y-auto">
         <Topbar onMenuClick={() => setIsSidebarOpen(true)} />
-        <main className="flex-1 p-4 md:p-8 ml-0 md:ml-64 overflow-x-hidden">
+        <main className="flex-1 p-4 md:p-8 ml-0 md:ml-64 overflow-x-hidden relative">
           {children}
         </main>
       </div>

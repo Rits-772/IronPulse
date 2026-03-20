@@ -60,11 +60,15 @@ export default function Login() {
         
         <div className="flex flex-col items-center mb-10">
           <motion.div 
-            animate={{ rotate: [0, 5, -5, 0] }}
-            transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-            className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 border border-primary/20 shadow-[0_0_20px_rgba(57,255,20,0.1)]"
+            animate={{ scale: [1, 1.05, 1], filter: ["drop-shadow(0 0 5px rgba(57,255,20,0.2))", "drop-shadow(0 0 15px rgba(57,255,20,0.4))", "drop-shadow(0 0 5px rgba(57,255,20,0.2))"] }}
+            transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+            className="w-24 h-24 mb-6 relative"
           >
-            <Fingerprint className="w-8 h-8 text-primary" />
+            <img 
+              src="/logo.png" 
+              alt="IronPulse" 
+              className="w-full h-full object-contain"
+            />
           </motion.div>
           <h1 className="text-3xl font-display font-black uppercase tracking-[0.2em] text-white text-glow-small">Neural<span className="text-primary tracking-tighter ml-2">Sync</span></h1>
           <p className="text-muted-foreground mt-2 text-[10px] font-bold uppercase tracking-[0.4em] opacity-60 italic">Operative Authentication Portal</p>

@@ -47,13 +47,13 @@ function HexagonBackground({
     <div
       data-slot="hexagon-background"
       className={cn(
-        'absolute inset-0 overflow-hidden bg-background -z-10',
+        'relative w-full min-h-screen overflow-x-hidden bg-background',
         className,
       )}
       {...props}
     >
       <style>{`:root { --hexagon-margin: ${hexagonMargin}px; }`}</style>
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20 -z-10">
         {Array.from({ length: gridDimensions.rows }).map((_, rowIndex) => (
           <div
             key={`row-${rowIndex}`}

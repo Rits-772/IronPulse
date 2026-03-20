@@ -761,3 +761,175 @@ export function useTopOperatives() {
     }
   });
 }
+export function useRpgStats() {
+  const { user } = useAuth();
+  const { data: workouts } = useWorkouts();
+  const { data: records } = usePersonalRecords();
+  const { data: nutrition } = useNutritionData();
+
+  return useQuery({
+    queryKey: ['rpg-stats', user?.id, workouts?.length, records?.length],
+    queryFn: () => {
+      if (!user) return [];
+
+      // 1. Power (Max weight normalized to 500 lbs benchmark)
+      const maxWeight = records?.length ? Math.max(...records.map(r => r.weight)) : 0;
+      const power = Math.min((maxWeight / 500) * 100, 100);
+
+      // 2. Endurance (Volume normalized to 50k weekly volume)
+      const weeklyVolume = workouts?.slice(0, 7).reduce((acc, w) => acc + w.volume, 0) || 0;
+      const endurance = Math.min((weeklyVolume / 50000) * 100, 100);
+
+      // 3. Stamina (Session frequency)
+      const sessions = workouts?.slice(0, 7).length || 0;
+      const stamina = Math.min((sessions / 5) * 100, 100);
+
+      // 4. Agility (Variety of exercises)
+      const uniqueExercises = new Set(workouts?.flatMap(w => w.exercises.map((ex: any) => ex.name))).size;
+      const agility = Math.min((uniqueExercises / 20) * 100, 100);
+
+      // 5. Recovery (Nutrition + Rest balance)
+      const today = new Date().toISOString().split('T')[0];
+      const todayNut = nutrition?.find(n => n.date === today);
+      const nutScore = todayNut ? (todayNut.calories / 2500) * 50 : 0;
+      const recovery = Math.min(nutScore + (stamina > 50 ? 50 : 25), 100);
+
+      // 6. Focus (Consistency/Streak)
+      const calculateStreak = (workouts: any[]) => {
+        if (!workouts || workouts.length === 0) return 0;
+        const dates = [...new Set(workouts.map(w => w.date))].sort().reverse();
+        let streak = 0;
+        let current = new Date();
+        current.setHours(0, 0, 0, 0);
+
+        for (const dateStr of dates) {
+          const d = new Date(dateStr);
+          d.setHours(0, 0, 0, 0);
+          const diff = (current.getTime() - d.getTime()) / (1000 * 3600 * 24);
+          if (diff <= 1) {
+            streak++;
+            current = d;
+          } else break;
+        }
+        return streak;
+      };
+      const streak = calculateStreak(workouts || []);
+      const focus = Math.min((streak / 7) * 100, 100);
+
+      return [
+        { subject: 'Power', A: Math.round(power), fullMark: 100 },
+        { subject: 'Endurance', A: Math.round(endurance), fullMark: 100 },
+        { subject: 'Stamina', A: Math.round(stamina), fullMark: 100 },
+        { subject: 'Agility', A: Math.round(agility), fullMark: 100 },
+        { subject: 'Recovery', A: Math.round(recovery), fullMark: 100 },
+        { subject: 'Focus', A: Math.round(focus), fullMark: 100 },
+      ];
+    },
+    enabled: !!user
+  });
+}
+export function useSaveExercise() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (exercise: { name: string, muscle_group: string }) => {
+      const { data, error } = await supabase
+        .from('exercises')
+        .upsert({
+          ...exercise,
+          is_custom: true
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['exercises'] });
+      queryClient.invalidateQueries({ queryKey: ['rpg-stats'] });
+    }
+  });
+}
+
+export function useAchievements() {
+  const { data: workouts } = useWorkouts();
+  const { data: records } = usePersonalRecords();
+  const { data: nutrition } = useNutritionData();
+
+  return useQuery({
+    queryKey: ['achievements', workouts?.length, records?.length, (nutrition || []).length],
+    queryFn: () => {
+      const calculateStreak = (workouts: any[]) => {
+        if (!workouts || workouts.length === 0) return 0;
+        const dates = [...new Set(workouts.map(w => w.date))].sort().reverse();
+        let streak = 0;
+        let current = new Date();
+        current.setHours(0, 0, 0, 0);
+        for (const dateStr of dates) {
+          const d = new Date(dateStr);
+          d.setHours(0, 0, 0, 0);
+          const diff = (current.getTime() - d.getTime()) / (1000 * 3600 * 24);
+          if (diff <= 1) { streak++; current = d; } else break;
+        }
+        return streak;
+      };
+
+      const streak = calculateStreak(workouts || []);
+      const maxVolume = (workouts || []).length > 0 ? Math.max(...(workouts || []).map(w => w.volume)) : 0;
+      const maxDuration = (workouts || []).length > 0 ? Math.max(...(workouts || []).map(w => w.duration)) : 0;
+
+      return [
+        {
+          id: 'first-blood',
+          title: 'First Blood',
+          description: 'Commence your first training protocol.',
+          icon: 'Sword',
+          isUnlocked: (workouts || []).length > 0
+        },
+        {
+          id: 'protocol-breached',
+          title: 'Protocol Breached',
+          description: 'Establish a new personal performance record.',
+          icon: 'Target',
+          isUnlocked: (records || []).length > 0
+        },
+        {
+          id: 'undying-operative',
+          title: 'Undying Operative',
+          description: 'Maintain a 7-day synchronization streak.',
+          icon: 'Flame',
+          isUnlocked: streak >= 7
+        },
+        {
+          id: 'the-titan',
+          title: 'The Titan',
+          description: 'Move over 10,000 LBS in a single session.',
+          icon: 'Weight',
+          isUnlocked: maxVolume >= 10000
+        },
+        {
+          id: 'overdrive',
+          title: 'Overdrive',
+          description: 'Surpass 90 minutes of active operation.',
+          icon: 'Zap',
+          isUnlocked: maxDuration >= 90
+        },
+        {
+          id: 'consistent-operative',
+          title: 'Consistent Operative',
+          description: 'Maintain a 30-day synchronization streak.',
+          icon: 'Shield',
+          isUnlocked: streak >= 30
+        },
+        {
+          id: 'nutrition-prophet',
+          title: 'Nutrition Prophet',
+          description: 'Log 7 consecutive days of biometric data.',
+          icon: 'Salad',
+          isUnlocked: (nutrition || []).length >= 7
+        }
+      ];
+    }
+  });
+}

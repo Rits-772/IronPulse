@@ -1,17 +1,21 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { motion, type Variants } from "framer-motion";
 import { 
+  useActivityData, useProgressData, useWorkouts, usePersonalRecords, 
+  useProfile, useMetricsData, useNutritionData, useRpgStats, useAchievements 
+} from "@/hooks/use-db-data";
+import { 
   Activity, Flame, TrendingUp, Weight, Play, Dumbbell, Trophy, 
-  Shield, Zap, Target, Heart, Navigation, Star, Info
+  Shield, Zap, Target, Heart, Navigation, Star, Info, Sword, Salad
 } from "lucide-react";
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis 
 } from "recharts";
-import { useActivityData, useProgressData, useWorkouts, usePersonalRecords, useProfile, useMetricsData, useNutritionData } from "@/hooks/use-db-data";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import GymScene from "@/components/3d/GymScene";
+import { cn } from "@/lib/utils";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -25,6 +29,45 @@ const itemVariants: Variants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
 };
+
+const IconMap: Record<string, any> = {
+  Sword, Target, Flame, Weight, Zap, Shield, Salad, Trophy
+};
+
+function AchievementBadge({ achievement }: { achievement: any }) {
+  const Icon = IconMap[achievement.icon] || Trophy;
+  return (
+    <motion.div 
+      whileHover={{ y: -5, scale: 1.05 }}
+      className={cn(
+        "relative p-4 rounded-xl border transition-all duration-300 flex flex-col items-center text-center gap-2 overflow-hidden",
+        achievement.isUnlocked 
+          ? "bg-primary/10 border-primary/30 shadow-[0_0_15px_rgba(57,255,20,0.1)] opacity-100" 
+          : "bg-white/5 border-white/5 opacity-40 grayscale"
+      )}
+    >
+      {achievement.isUnlocked && (
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent pointer-events-none" />
+      )}
+      <div className={cn(
+        "w-12 h-12 rounded-full flex items-center justify-center mb-1 relative",
+        achievement.isUnlocked ? "bg-primary/20" : "bg-white/5"
+      )}>
+        <Icon className={cn("w-6 h-6", achievement.isUnlocked ? "text-primary text-glow-small" : "text-muted-foreground")} />
+        {achievement.isUnlocked && (
+          <div className="absolute inset-0 rounded-full border border-primary/30 animate-ping" style={{ animationDuration: '3s' }} />
+        )}
+      </div>
+      <div className="text-[10px] font-display font-black uppercase tracking-widest leading-tight text-white">{achievement.title}</div>
+      <div className="text-[8px] text-muted-foreground font-sans uppercase leading-tight max-w-[80px]">{achievement.description}</div>
+      {achievement.isUnlocked && (
+        <div className="absolute top-2 right-2">
+          <Star className="w-2.5 h-2.5 text-primary fill-primary" />
+        </div>
+      )}
+    </motion.div>
+  );
+}
 
 function AttributeMeter({ label, value, max, icon: Icon, color }: { label: string, value: number, max: number, icon: any, color: string }) {
   const percentage = Math.min((value / max) * 100, 100);
@@ -143,6 +186,8 @@ export default function Dashboard() {
   const { data: profile } = useProfile();
   const { data: metrics } = useMetricsData();
   const { data: nutritionData } = useNutritionData();
+  const { data: radarData, isLoading: radarLoading } = useRpgStats();
+  const { data: achievements, isLoading: isLoadingAchievements } = useAchievements();
 
   const todayStr = new Date().toISOString().split('T')[0];
   const todayNutrition = nutritionData?.find(n => n.date === todayStr) || { calories: 0, protein: 0, carbs: 0, fats: 0, water_ml: 0 };
@@ -180,15 +225,6 @@ export default function Dashboard() {
   };
 
   const streak = calculateStreak(workouts || []);
-
-  const radarData = [
-    { subject: 'Power', A: 85, fullMark: 100 },
-    { subject: 'Stamina', A: 70, fullMark: 100 },
-    { subject: 'Agility', A: 60, fullMark: 100 },
-    { subject: 'Speed', A: 50, fullMark: 100 },
-    { subject: 'Recovery', A: 75, fullMark: 100 },
-    { subject: 'Focus', A: 90, fullMark: 100 },
-  ];
 
   const circleStats = [
     { label: "WEEKLY VOLUME", value: weeklyVolume.toLocaleString(), unit: "LBS", icon: Weight, progress: (weeklyVolume / 50000) * 100, reference: "Target: 50k LBS", color: "stroke-rose-500" },
@@ -234,20 +270,29 @@ export default function Dashboard() {
               <Info className="w-4 h-4 text-muted-foreground cursor-help hover:text-primary transition-colors" />
             </div>
             <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
-                  <PolarGrid stroke="#ffffff10" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: '#ffffff60', fontSize: 10, fontFamily: 'Rajdhani' }} />
-                  <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                  <Radar
-                    name="Performance"
-                    dataKey="A"
-                    stroke="hsl(var(--primary))"
-                    fill="hsl(var(--primary))"
-                    fillOpacity={0.3}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
+              {radarLoading ? (
+                 <div className="w-full h-full flex items-center justify-center"><Activity className="animate-spin text-primary" /></div>
+              ) : radarData && radarData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+                    <PolarGrid stroke="#ffffff10" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#ffffff60', fontSize: 10, fontFamily: 'Rajdhani' }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                    <Radar
+                      name="Performance"
+                      dataKey="A"
+                      stroke="hsl(var(--primary))"
+                      fill="hsl(var(--primary))"
+                      fillOpacity={0.3}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground opacity-40">
+                  <Activity className="w-12 h-12 mb-2" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">No Biometric Data Found</span>
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -284,11 +329,44 @@ export default function Dashboard() {
 
             {/* Attribute Bars */}
             <motion.div variants={itemVariants} className="bg-card/40 border border-white/5 rounded-2xl p-6 space-y-4 backdrop-blur-md">
-              <AttributeMeter label="Core Strength" value={85} max={100} icon={Shield} color="bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
-              <AttributeMeter label="Neural Drive" value={92} max={100} icon={Zap} color="bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]" />
-              <AttributeMeter label="Precision" value={78} max={100} icon={Target} color="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />
-              <AttributeMeter label="Recovery" value={64} max={100} icon={Heart} color="bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+              <AttributeMeter 
+                label="Core Strength" 
+                value={radarData?.find(d => d.subject === 'Power')?.A || 0} 
+                max={100} icon={Shield} color="bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]" 
+              />
+              <AttributeMeter 
+                label="Neural Drive" 
+                value={radarData?.find(d => d.subject === 'Focus')?.A || 0} 
+                max={100} icon={Zap} color="bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]" 
+              />
+              <AttributeMeter 
+                label="Precision" 
+                value={radarData?.find(d => d.subject === 'Agility')?.A || 0} 
+                max={100} icon={Target} color="bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" 
+              />
+              <AttributeMeter 
+                label="Recovery" 
+                value={radarData?.find(d => d.subject === 'Recovery')?.A || 0} 
+                max={100} icon={Heart} color="bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+              />
             </motion.div>
+          </div>
+        </motion.div>
+
+        {/* Achievements / Medal Cabinet */}
+        <motion.div variants={itemVariants} className="mt-8 mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <Trophy className="w-5 h-5 text-primary" />
+            <h2 className="text-2xl font-display font-black uppercase tracking-widest text-glow-small">Medal Cabinet</h2>
+            <div className="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent ml-4" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-4">
+            {achievements?.map((ach) => (
+              <AchievementBadge key={ach.id} achievement={ach} />
+            ))}
+            {isLoadingAchievements && Array(7).fill(0).map((_, i) => (
+              <div key={i} className="h-32 bg-white/5 border border-white/5 rounded-xl animate-pulse" />
+            ))}
           </div>
         </motion.div>
 
@@ -335,7 +413,7 @@ export default function Dashboard() {
             <div className="h-72 w-full">
               {progressLoading ? (
                 <div className="w-full h-full flex items-center justify-center"><Activity className="animate-spin text-primary" /></div>
-              ) : (
+              ) : progressData && progressData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={progressData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
@@ -349,6 +427,11 @@ export default function Dashboard() {
                     <Line type="monotone" dataKey="bench" stroke="hsl(var(--accent))" strokeWidth={3} dot={{r: 0}} activeDot={{r: 6, fill: "hsl(var(--accent))"}} />
                   </LineChart>
                 </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground opacity-40">
+                  <TrendingUp className="w-12 h-12 mb-2" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Insufficient Historical Data</span>
+                </div>
               )}
             </div>
           </motion.div>
