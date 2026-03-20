@@ -1,78 +1,30 @@
-import * as THREE from 'three';
-import { useRef, useEffect } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Float, Sparkles, PerspectiveCamera } from '@react-three/drei';
+import * as THREE from "three";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { PerspectiveCamera, Sparkles } from "@react-three/drei";
+import { useRef, useEffect } from "react";
 
-interface PlateProps {
-  position: [number, number, number];
-  rotation: [number, number, number];
-  scale?: number;
-  color: string;
-}
-
-function AbstractPlate({ position, rotation, scale = 1, color }: PlateProps) {
-  const mesh = useRef<THREE.Mesh>(null);
-  return (
-    <Float speed={1.5} rotationIntensity={1} floatIntensity={2}>
-      <mesh ref={mesh} position={position} rotation={rotation} scale={scale}>
-        <torusGeometry args={[1, 0.2, 16, 64]} />
-        <meshStandardMaterial 
-          color={color || "#222"} 
-          metalness={0.9} 
-          roughness={0.2}
-          emissive={color === "#39FF14" ? "#39FF14" : "#000"}
-          emissiveIntensity={color === "#39FF14" ? 0.5 : 0}
-        />
-      </mesh>
-    </Float>
-  );
-}
-
-function EnergyLines() {
-  const linesRef = useRef<THREE.Group>(null);
-  useFrame((state) => {
-    if (linesRef.current) {
-      linesRef.current.position.z = (state.clock.elapsedTime * 2) % 10;
-    }
-  });
-  const lines = useRef(
-    [...Array(20)].map((_, i) => ({
-      key: i,
-      position: [(Math.random() - 0.5) * 20, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 40 - 20] as [number, number, number],
-      height: Math.random() * 5 + 2,
-      color: Math.random() > 0.5 ? "#39FF14" : "#00D4FF",
-    }))
-  ).current;
-
-  return (
-    <group ref={linesRef}>
-      {lines.map((line) => (
-        <mesh key={line.key} position={line.position}>
-          <cylinderGeometry args={[0.02, 0.02, line.height, 8]} />
-          <meshBasicMaterial color={line.color} transparent opacity={0.3} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
+/* ---------------- CAMERA SCROLL ---------------- */
 
 function ScrollCamera() {
   const { camera } = useThree();
-  const scrollRef = useRef(0);
+  const scroll = useRef(0);
 
   useEffect(() => {
     const handleScroll = () => {
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      scrollRef.current = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+      const max =
+        document.documentElement.scrollHeight - window.innerHeight;
+      scroll.current = max > 0 ? window.scrollY / max : 0;
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useFrame(() => {
-    const targetZ = 8 - scrollRef.current * 12;
-    const targetY = scrollRef.current * 4;
-    
+    const targetZ = 8 - scroll.current * 80;
+    const targetY = scroll.current * 2;
+
     camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.08);
     camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.08);
   });
@@ -80,26 +32,117 @@ function ScrollCamera() {
   return null;
 }
 
+/* ---------------- GYM OBJECTS ---------------- */
+
+function GymTunnelObjects() {
+  const group = useRef<THREE.Group>(null);
+
+  const plates = [];
+
+  for (let i = 0; i < 25; i++) {
+    const z = -i * 6;
+
+    plates.push(
+      <mesh key={"l" + i} position={[-6, Math.random() * 2 - 1, z]}>
+        <torusGeometry args={[1.2, 0.25, 16, 64]} />
+        <meshStandardMaterial
+          color="#111"
+          metalness={0.9}
+          roughness={0.25}
+        />
+      </mesh>
+    );
+
+    plates.push(
+      <mesh key={"r" + i} position={[6, Math.random() * 2 - 1, z]}>
+        <torusGeometry args={[1.2, 0.25, 16, 64]} />
+        <meshStandardMaterial
+          color="#111"
+          metalness={0.9}
+          roughness={0.25}
+        />
+      </mesh>
+    );
+  }
+
+  useFrame(() => {
+    if (!group.current) return;
+
+    group.current.children.forEach((child) => {
+      child.rotation.x += 0.002;
+      child.rotation.y += 0.003;
+    });
+  });
+
+  return <group ref={group}>{plates}</group>;
+}
+
+/* ---------------- FLOOR ENERGY LINES ---------------- */
+
+function EnergyFloor() {
+  const lines = [];
+
+  for (let i = -12; i <= 12; i++) {
+    lines.push(
+      <mesh key={i} position={[i * 0.8, -2.5, -50]}>
+        <boxGeometry args={[0.05, 0.02, 120]} />
+        <meshBasicMaterial color="#39FF14" />
+      </mesh>
+    );
+  }
+
+  return <group>{lines}</group>;
+}
+
+/* ---------------- SIDE RAILS ---------------- */
+
+function SideRails() {
+  return (
+    <group>
+      <mesh position={[-4.5, -2.3, -50]}>
+        <boxGeometry args={[0.1, 0.05, 120]} />
+        <meshBasicMaterial color="#00D4FF" />
+      </mesh>
+
+      <mesh position={[4.5, -2.3, -50]}>
+        <boxGeometry args={[0.1, 0.05, 120]} />
+        <meshBasicMaterial color="#39FF14" />
+      </mesh>
+    </group>
+  );
+}
+
+/* ---------------- SCENE ---------------- */
+
 export default function ThreeScene() {
   return (
-    <Canvas 
-      shadows={{ type: THREE.PCFShadowMap }} 
-      gl={{ failIfMajorPerformanceCaveat: false }}
+    <Canvas
+      gl={{ antialias: true }}
+      shadows={{ type: THREE.PCFShadowMap }}
+      dpr={[1, 1.5]}
     >
       <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={50} />
+
       <ScrollCamera />
-      <color attach="background" args={['#060608']} />
-      <fog attach="fog" args={['#060608', 5, 25]} />
-      <ambientLight intensity={0.2} />
-      <directionalLight position={[10, 10, 5]} intensity={1} color="#ffffff" castShadow />
-      <pointLight position={[-5, -2, -5]} intensity={50} color="#39FF14" distance={20} />
-      <pointLight position={[5, 5, -10]} intensity={40} color="#00D4FF" distance={20} />
-      <AbstractPlate position={[-3, 1, -2]} rotation={[Math.PI/4, Math.PI/4, 0]} scale={1.5} color="#2a2a2a" />
-      <AbstractPlate position={[4, -1, -5]} rotation={[-Math.PI/6, Math.PI/3, 0]} scale={2} color="#151515" />
-      <AbstractPlate position={[-2, -2, -8]} rotation={[0, Math.PI/2, 0]} scale={2.5} color="#39FF14" />
-      <AbstractPlate position={[2, 3, -12]} rotation={[Math.PI/2, 0, 0]} scale={1.2} color="#111" />
-      <EnergyLines />
-      <Sparkles count={300} scale={20} size={1.5} speed={0.4} opacity={0.2} color="#ffffff" />
+
+      <color attach="background" args={["#060608"]} />
+      <fog attach="fog" args={["#060608", 10, 80]} />
+
+      <ambientLight intensity={0.3} />
+
+      <pointLight position={[0, 5, 5]} intensity={10} color="#39FF14" />
+
+      <GymTunnelObjects />
+      <EnergyFloor />
+      <SideRails />
+
+      <Sparkles
+        count={180}
+        scale={30}
+        size={1.4}
+        speed={0.25}
+        opacity={0.25}
+      />
     </Canvas>
   );
 }

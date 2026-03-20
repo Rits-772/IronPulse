@@ -7,6 +7,10 @@ type AuthContextType = {
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithGithub: () => Promise<void>;
+  signInWithOtp: (email: string) => Promise<{ error: any }>;
+  verifyOtp: (email: string, token: string) => Promise<{ error: any }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,14 +21,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for changes on auth state (logged in, signed out, etc.)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -38,8 +40,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const signInWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+  };
+
+  const signInWithGithub = async () => {
+    await supabase.auth.signInWithOAuth({ provider: 'github', options: { redirectTo: window.location.origin } });
+  };
+
+  const signInWithOtp = async (email: string) => {
+    return await supabase.auth.signInWithOtp({ email });
+  };
+
+  const verifyOtp = async (email: string, token: string) => {
+    return await supabase.auth.verifyOtp({ email, token, type: 'email' });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      signOut, 
+      signInWithGoogle, 
+      signInWithGithub, 
+      signInWithOtp, 
+      verifyOtp 
+    }}>
       {children}
     </AuthContext.Provider>
   );
