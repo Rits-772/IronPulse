@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
+import { sessionSchema, nutritionSchema, profileUpdateSchema, routineSchema, postSchema } from '@/lib/schemas';
 
 // --- Types based on provided schema ---
 export type WorkoutSession = {
@@ -150,7 +151,7 @@ export function useActivityData() {
         .from('workout_sessions')
         .select('workout_date')
         .eq('user_id', user.id)
-        .gte('workout_date', sevenDaysAgo.toISOString().split('T')[0]);
+        .gte('workout_date', new Date().toLocaleDateString('en-CA'));
 
       if (error) throw error;
 
@@ -257,13 +258,16 @@ export function useSaveWorkout() {
     mutationFn: async ({ name, exercises }: { name: string, exercises: any[] }) => {
       if (!user) throw new Error('Auth required');
 
+      // Zod Validation
+      const validated = sessionSchema.parse({ name, exercises });
+
       // 1. Create Session
       const { data: session, error: sError } = await supabase
         .from('workout_sessions')
         .insert({
           user_id: user.id,
           workout_name: name,
-          workout_date: new Date().toISOString().split('T')[0]
+          workout_date: new Date().toLocaleDateString('en-CA')
         })
         .select()
         .single();
@@ -307,24 +311,28 @@ export function useSaveWorkout() {
       }
 
       // 3. Award XP
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
       const totalSets = exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
       const xpEarned = 50 + (exercises.length * 10) + (totalSets * 5);
       
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('xp')
-        .eq('id', user.id)
-        .single();
-      
-      const newXp = (profile?.xp || 0) + xpEarned;
-      const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
+      if (currentProfile) {
+        const newXp = (currentProfile.xp || 0) + xpEarned;
+        const newLevel = Math.floor(Math.sqrt(newXp / 100)) + 1;
 
-      await supabase
-        .from('profiles')
-        .update({ xp: newXp, level: newLevel })
-        .eq('id', user.id);
+        await supabase
+          .from('profiles')
+          .update({ xp: newXp, level: newLevel })
+          .eq('id', user.id);
+        
+        return { session, xpEarned, newLevel };
+      }
 
-      return { session, xpEarned, newLevel };
+      return { session, xpEarned, newLevel: 1 };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workouts'] });
@@ -343,6 +351,9 @@ export function useSaveMetrics() {
     mutationFn: async (metrics: Partial<BodyMetric>) => {
       if (!user) throw new Error('Auth required');
 
+      // Zod Validation (re-using nutrition parts or profile parts)
+      const validated = profileUpdateSchema.partial().parse(metrics);
+
       const { data, error } = await supabase
         .from('body_metrics')
         .insert({
@@ -352,7 +363,7 @@ export function useSaveMetrics() {
           chest_cm: metrics.chest_cm,
           waist_cm: metrics.waist_cm,
           arms_cm: metrics.arms_cm,
-          recorded_at: new Date().toISOString().split('T')[0]
+          recorded_at: new Date().toLocaleDateString('en-CA')
         })
         .select()
         .single();
@@ -435,6 +446,8 @@ export function useUpdateProfile() {
     mutationFn: async (profile: Partial<Profile>) => {
       if (!user) throw new Error('Auth required');
       
+      const validated = profileUpdateSchema.partial().parse(profile);
+      
       const { data, error } = await supabase
         .from('profiles')
         .upsert({
@@ -493,6 +506,8 @@ export function useSaveRoutine() {
   return useMutation({
     mutationFn: async (routine: Omit<Routine, 'id'> & { id?: string }) => {
       if (!user) throw new Error('Auth required');
+      
+      const validated = routineSchema.parse(routine);
       
       const { data, error } = await supabase
         .from('routines')
@@ -571,12 +586,14 @@ export function useSaveNutrition() {
     mutationFn: async (entry: Omit<Nutrition, 'id' | 'user_id' | 'date'> & { id?: string, date?: string }) => {
       if (!user) throw new Error('Auth required');
       
+      const validated = nutritionSchema.parse(entry);
+      
       const { data, error } = await supabase
         .from('daily_nutrition')
         .upsert({
           ...entry,
           user_id: user.id,
-          date: entry.date || new Date().toISOString().split('T')[0]
+          date: entry.date || new Date().toLocaleDateString('en-CA')
         })
         .select()
         .single();
@@ -708,10 +725,13 @@ export function useCreatePost() {
   return useMutation({
     mutationFn: async (post: Omit<CommunityPost, 'id' | 'user_id' | 'created_at' | 'likes_count' | 'comments_count' | 'user_has_liked'>) => {
       if (!user) throw new Error('Auth required');
+      
+      const validated = postSchema.parse(post);
+      
       const { data, error } = await supabase
         .from('posts')
         .insert({
-          ...post,
+          ...validated,
           user_id: user.id
         })
         .select()
@@ -789,10 +809,12 @@ export function useRpgStats() {
       const agility = Math.min((uniqueExercises / 20) * 100, 100);
 
       // 5. Recovery (Nutrition + Rest balance)
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA');
       const todayNut = nutrition?.find(n => n.date === today);
-      const nutScore = todayNut ? (todayNut.calories / 2500) * 50 : 0;
-      const recovery = Math.min(nutScore + (stamina > 50 ? 50 : 25), 100);
+      const nutScore = todayNut ? (todayNut.calories / 2500) * 40 : 0;
+      const proteinScore = todayNut ? (todayNut.protein / 180) * 20 : 0;
+      const sessionScore = stamina > 50 ? 40 : 20;
+      const recovery = Math.min(nutScore + proteinScore + sessionScore, 100);
 
       // 6. Focus (Consistency/Streak)
       const calculateStreak = (workouts: any[]) => {
@@ -856,9 +878,11 @@ export function useAchievements() {
   const { data: workouts } = useWorkouts();
   const { data: records } = usePersonalRecords();
   const { data: nutrition } = useNutritionData();
+  const { data: routines } = useRoutines();
+  const { data: profile } = useProfile();
 
   return useQuery({
-    queryKey: ['achievements', workouts?.length, records?.length, (nutrition || []).length],
+    queryKey: ['achievements', workouts?.length, records?.length, (nutrition || []).length, (routines || []).length, profile?.level],
     queryFn: () => {
       const calculateStreak = (workouts: any[]) => {
         if (!workouts || workouts.length === 0) return 0;
@@ -869,7 +893,7 @@ export function useAchievements() {
         for (const dateStr of dates) {
           const d = new Date(dateStr);
           d.setHours(0, 0, 0, 0);
-          const diff = (current.getTime() - d.getTime()) / (1000 * 3600 * 24);
+          const diff = Math.floor((current.getTime() - d.getTime()) / (1000 * 3600 * 24));
           if (diff <= 1) { streak++; current = d; } else break;
         }
         return streak;
@@ -878,6 +902,7 @@ export function useAchievements() {
       const streak = calculateStreak(workouts || []);
       const maxVolume = (workouts || []).length > 0 ? Math.max(...(workouts || []).map(w => w.volume)) : 0;
       const maxDuration = (workouts || []).length > 0 ? Math.max(...(workouts || []).map(w => w.duration)) : 0;
+      const totalVolume = (workouts || []).reduce((acc, w) => acc + w.volume, 0);
 
       return [
         {
@@ -890,7 +915,7 @@ export function useAchievements() {
         {
           id: 'protocol-breached',
           title: 'Protocol Breached',
-          description: 'Establish a new personal performance record.',
+          description: 'Establish a new performance record.',
           icon: 'Target',
           isUnlocked: (records || []).length > 0
         },
@@ -909,6 +934,20 @@ export function useAchievements() {
           isUnlocked: maxVolume >= 10000
         },
         {
+          id: 'architect-of-iron',
+          title: 'Architect of Iron',
+          description: 'Construct 3 custom training routines.',
+          icon: 'Shield',
+          isUnlocked: (routines || []).length >= 3
+        },
+        {
+          id: 'absolute-unit',
+          title: 'Absolute Unit',
+          description: 'Surpass 100,000 LBS of historical volume.',
+          icon: 'Weight',
+          isUnlocked: totalVolume >= 100000
+        },
+        {
           id: 'overdrive',
           title: 'Overdrive',
           description: 'Surpass 90 minutes of active operation.',
@@ -916,18 +955,18 @@ export function useAchievements() {
           isUnlocked: maxDuration >= 90
         },
         {
-          id: 'consistent-operative',
-          title: 'Consistent Operative',
-          description: 'Maintain a 30-day synchronization streak.',
-          icon: 'Shield',
-          isUnlocked: streak >= 30
-        },
-        {
           id: 'nutrition-prophet',
           title: 'Nutrition Prophet',
           description: 'Log 7 consecutive days of biometric data.',
           icon: 'Salad',
           isUnlocked: (nutrition || []).length >= 7
+        },
+        {
+          id: 'veteran-operative',
+          title: 'Veteran Operative',
+          description: 'Achieve Operational Level 10.',
+          icon: 'Trophy',
+          isUnlocked: (profile?.level || 1) >= 10
         }
       ];
     }

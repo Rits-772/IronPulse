@@ -1,10 +1,14 @@
+import { lazy, Suspense, useState } from "react";
 import { Link } from "wouter";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowRight, Activity, Zap, Target, BarChart3, Dumbbell, Gauge, ChevronRight } from "lucide-react";
-import { SplineScene } from "@/components/ui/spline-scene";
 import { ZoomParallax } from "@/components/ui/zoom-parallax";
 import { TestimonialsSection } from "@/components/ui/testimonial-section";
-import { useState } from "react";
+import { MetaTags } from "@/components/seo/MetaTags";
+import { useIsMobile } from "@/hooks/use-mobile";
+
+const SplineScene = lazy(() => import("@/components/ui/spline-scene").then(module => ({ default: module.SplineScene })));
+const GymScene = lazy(() => import("@/components/3d/GymScene"));
 
 const staggerContainer = {
   hidden: { opacity: 0 },
@@ -50,12 +54,17 @@ const testimonialsData = [
 ];
 
 export default function Landing() {
+  const isMobile = useIsMobile();
   const { scrollYProgress } = useScroll();
   const bgOpacity = useTransform(scrollYProgress, [0.38, 0.45], [0, 0.4]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0]);
 
   return (
     <div className="relative min-h-screen bg-transparent font-sans">
+      <MetaTags 
+        title="IronPulse | Elite Cybernetic Fitness Protocol" 
+        description="Experience the next generation of training. IronPulse merges raw iron with cyberpunk analytics."
+      />
       {/* Persistent Background Image (appears as parallax completes) */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <motion.img 
@@ -84,16 +93,22 @@ export default function Landing() {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center pt-24 pb-12 overflow-hidden">
-        {/* Spline Background */}
+        {/* Responsive 3D Background */}
         <div className="absolute inset-0 z-0">
-          <SplineScene
-            scene="/scene.splinecode"
-            className="w-full h-full object-cover"
-          />
+          <Suspense fallback={<div className="w-full h-full bg-black/40 animate-pulse" />}>
+            {isMobile ? (
+              <GymScene />
+            ) : (
+              <SplineScene
+                scene="/scene.splinecode"
+                className="w-full h-full object-cover"
+              />
+            )}
+          </Suspense>
         </div>
 
         {/* Cinematic Backdrop Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/20 z-5 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/40 to-black/20 z-[5] pointer-events-none" />
 
         <motion.div style={{ opacity: heroOpacity }} className="container px-6 mx-auto relative z-10 w-full flex items-center pointer-events-none">
           {/* Hero Content */}

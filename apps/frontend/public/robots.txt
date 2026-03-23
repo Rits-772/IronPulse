@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ironpulse.app/sitemap.xml

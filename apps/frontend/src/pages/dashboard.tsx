@@ -1,3 +1,4 @@
+import { useMemo, memo, lazy, Suspense } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { motion, type Variants } from "framer-motion";
 import { 
@@ -6,7 +7,7 @@ import {
 } from "@/hooks/use-db-data";
 import { 
   Activity, Flame, TrendingUp, Weight, Play, Dumbbell, Trophy, 
-  Shield, Zap, Target, Heart, Navigation, Star, Info, Sword, Salad
+  Shield, Zap, Target, Heart, Star, Info, Sword, Salad
 } from "lucide-react";
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -14,8 +15,9 @@ import {
 } from "recharts";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
-import GymScene from "@/components/3d/GymScene";
 import { cn } from "@/lib/utils";
+
+const GymScene = lazy(() => import("@/components/3d/GymScene"));
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -34,7 +36,7 @@ const IconMap: Record<string, any> = {
   Sword, Target, Flame, Weight, Zap, Shield, Salad, Trophy
 };
 
-function AchievementBadge({ achievement }: { achievement: any }) {
+const AchievementBadge = memo(({ achievement }: { achievement: any }) => {
   const Icon = IconMap[achievement.icon] || Trophy;
   return (
     <motion.div 
@@ -67,9 +69,9 @@ function AchievementBadge({ achievement }: { achievement: any }) {
       )}
     </motion.div>
   );
-}
+});
 
-function AttributeMeter({ label, value, max, icon: Icon, color }: { label: string, value: number, max: number, icon: any, color: string }) {
+const AttributeMeter = memo(({ label, value, max, icon: Icon, color }: { label: string, value: number, max: number, icon: any, color: string }) => {
   const percentage = Math.min((value / max) * 100, 100);
   return (
     <div className="flex items-center gap-4 group">
@@ -93,9 +95,9 @@ function AttributeMeter({ label, value, max, icon: Icon, color }: { label: strin
       </div>
     </div>
   );
-}
+});
 
-function MetricCircle({ 
+const MetricCircle = memo(({ 
   label, 
   value, 
   unit, 
@@ -111,7 +113,7 @@ function MetricCircle({
   progress: number, 
   reference: string, 
   color: string 
-}) {
+}) => {
   const radius = 50;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
@@ -154,9 +156,9 @@ function MetricCircle({
       </div>
     </motion.div>
   );
-}
+});
 
-function PersonalRecordsList() {
+const PersonalRecordsList = memo(() => {
   const { data: records, isLoading } = usePersonalRecords();
 
   if (isLoading) return <div className="text-center py-4 text-muted-foreground animate-pulse">Scanning records...</div>;
@@ -177,7 +179,7 @@ function PersonalRecordsList() {
       ))}
     </div>
   );
-}
+});
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -189,70 +191,75 @@ export default function Dashboard() {
   const { data: radarData, isLoading: radarLoading } = useRpgStats();
   const { data: achievements, isLoading: isLoadingAchievements } = useAchievements();
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayNutrition = nutritionData?.find(n => n.date === todayStr) || { calories: 0, protein: 0, carbs: 0, fats: 0, water_ml: 0 };
+  const streak = useMemo(() => {
+    if (!workouts || workouts.length === 0) return 0;
+    const dates = workouts.map(w => w.date).sort().reverse();
+    let st = 1;
+    let current = new Date(dates[0]);
+    
+    for (let i = 1; i < dates.length; i++) {
+        const next = new Date(dates[i]);
+        const diff = (current.getTime() - next.getTime()) / (1000 * 3600 * 24);
+        if (diff === 1) {
+            st++;
+            current = next;
+        } else if (diff > 1) {
+            break;
+        }
+    }
+    return st;
+  }, [workouts]);
+
+  const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayNutrition = useMemo(() => 
+    nutritionData?.find(n => n.date === todayStr) || { calories: 0, protein: 0, water_ml: 0 }, 
+    [nutritionData, todayStr]
+  );
   
   const calorieGoal = 2500; 
   const proteinGoal = 180;
   const waterGoal = 3000;
 
-  const calProgress = Math.min((todayNutrition.calories / calorieGoal) * 100, 100);
-  const proteinProgress = Math.min((todayNutrition.protein / proteinGoal) * 100, 100);
-  const waterProgress = Math.min((todayNutrition.water_ml / waterGoal) * 100, 100);
-  const latestWeight = metrics && metrics.length > 0 ? metrics[metrics.length - 1].weight : 80;
-  const latestBodyFat = metrics && metrics.length > 0 ? metrics[metrics.length - 1].bodyFat : 20;
+  const circleStats = useMemo(() => {
+    const weeklyVolume = workouts?.reduce((acc, w) => acc + w.volume, 0) || 0;
+    const sessionsCount = workouts?.length || 0;
+    const calProgress = Math.min((todayNutrition.calories / calorieGoal) * 100, 100);
 
-  const weeklyVolume = workouts?.reduce((acc, w) => acc + w.volume, 0) || 0;
-  const sessionsCount = workouts?.length || 0;
-  
-  const calculateStreak = (workouts: any[]) => {
-    if (!workouts || workouts.length === 0) return 0;
-    const dates = workouts.map(w => w.date).sort().reverse();
-    let streak = 1;
-    let current = new Date(dates[0]);
-    
-    for (let i = 1; i < dates.length; i++) {
-      const next = new Date(dates[i]);
-      const diff = (current.getTime() - next.getTime()) / (1000 * 3600 * 24);
-      if (diff === 1) {
-        streak++;
-        current = next;
-      } else if (diff > 1) {
-        break;
-      }
-    }
-    return streak;
-  };
+    return [
+      { label: "WEEKLY VOLUME", value: weeklyVolume.toLocaleString(), unit: "LBS", icon: Weight, progress: (weeklyVolume / 50000) * 100, reference: "Target: 50k LBS", color: "stroke-rose-500" },
+      { label: "SESSIONS", value: sessionsCount.toString(), unit: "TOTAL", icon: Dumbbell, progress: (sessionsCount / 4) * 100, reference: "Goal: 4 per week", color: "stroke-accent" },
+      { label: "STREAK", value: streak.toString(), unit: "DAYS", icon: Flame, progress: (streak / 7) * 100, reference: "Goal: 7 days", color: "stroke-orange-500" },
+      { label: "DAILY CALORIES", value: todayNutrition.calories.toString(), unit: "kKal", icon: Zap, progress: calProgress, reference: `Goal: ${calorieGoal}`, color: "stroke-amber-400" },
+    ];
+  }, [workouts, todayNutrition, streak]);
 
-  const streak = calculateStreak(workouts || []);
+  const horizontalStats = useMemo(() => {
+    const latestWeight = metrics && metrics.length > 0 ? metrics[metrics.length - 1].weight : 80;
+    const latestBodyFat = metrics && metrics.length > 0 ? metrics[metrics.length - 1].bodyFat : 20;
 
-  const circleStats = [
-    { label: "WEEKLY VOLUME", value: weeklyVolume.toLocaleString(), unit: "LBS", icon: Weight, progress: (weeklyVolume / 50000) * 100, reference: "Target: 50k LBS", color: "stroke-rose-500" },
-    { label: "SESSIONS", value: sessionsCount.toString(), unit: "TOTAL", icon: Dumbbell, progress: (sessionsCount / 4) * 100, reference: "Goal: 4 per week", color: "stroke-accent" },
-    { label: "STREAK", value: streak.toString(), unit: "DAYS", icon: Flame, progress: (streak / 7) * 100, reference: "Goal: 7 days", color: "stroke-orange-500" },
-    { label: "DAILY CALORIES", value: todayNutrition.calories.toString(), unit: "kKal", icon: Zap, progress: calProgress, reference: `Goal: ${calorieGoal}`, color: "stroke-amber-400" },
-  ];
-
-  const horizontalStats = [
-    { title: "Weight", value: latestWeight, unit: "KG", icon: Weight, color: "text-primary" },
-    { title: "Body Fat", value: latestBodyFat, unit: "%", icon: Activity, color: "text-accent" },
-    { title: "Strength Index", value: "+12%", unit: "MoM", icon: TrendingUp, color: "text-purple-500" },
-    { title: "Hydration", value: (todayNutrition.water_ml / 1000).toFixed(1), unit: "L", icon: Navigation, color: "text-blue-500" },
-  ];
+    return [
+      { title: "Weight", value: latestWeight, unit: "KG", icon: Weight, color: "text-primary" },
+      { title: "Body Fat", value: latestBodyFat, unit: "%", icon: Activity, color: "text-accent" },
+      { title: "Strength Index", value: "+12%", unit: "MoM", icon: TrendingUp, color: "text-purple-500" },
+      { title: "Hydration", value: (todayNutrition.water_ml / 1000).toFixed(1), unit: "L", icon: Heart, color: "text-blue-500" },
+    ];
+  }, [metrics, todayNutrition]);
 
   return (
     <DashboardLayout>
-      {/* Mobile-only 3D Background */}
+      {/* 3D Background with Suspense */}
       <div className="fixed inset-0 z-0 pointer-events-none lg:hidden opacity-30">
-        <GymScene />
+        <Suspense fallback={<div className="w-full h-full bg-black/20" />}>
+          <GymScene />
+        </Suspense>
       </div>
 
       <div className="relative z-10">
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <h1 className="text-4xl font-display font-bold tracking-widest uppercase text-glow">Command Center</h1>
             <p className="text-muted-foreground font-sans mt-1">OPERATIVE: {user?.user_metadata?.full_name || 'Subject Alpha'} // STATUS: ONLINE</p>
-          </div>
+          </motion.div>
           <Link href="/log-workout" className="bg-primary text-black px-6 py-3 rounded-lg font-display font-bold uppercase tracking-widest text-lg flex items-center gap-2 hover:scale-105 transition-transform box-glow w-fit">
             <Play className="w-5 h-5 fill-black" /> Start Session
           </Link>
@@ -266,7 +273,7 @@ export default function Dashboard() {
           {/* Radar Chart Section */}
           <motion.div variants={itemVariants} className="bg-card/40 border border-white/5 rounded-3xl p-8 backdrop-blur-xl relative overflow-hidden group">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-display font-bold text-xl uppercase tracking-widest">General Information</h3>
+              <h3 className="font-display font-bold text-xl uppercase tracking-widest">Biometric Profile</h3>
               <Info className="w-4 h-4 text-muted-foreground cursor-help hover:text-primary transition-colors" />
             </div>
             <div className="h-72 w-full">
@@ -290,7 +297,7 @@ export default function Dashboard() {
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground opacity-40">
                   <Activity className="w-12 h-12 mb-2" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">No Biometric Data Found</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Initial Sync Required</span>
                 </div>
               )}
             </div>
@@ -298,7 +305,6 @@ export default function Dashboard() {
 
           {/* Character Card & Attribute Bars */}
           <div className="flex flex-col gap-6">
-            {/* Character Info */}
             <motion.div variants={itemVariants} className="bg-emerald-500/20 border border-emerald-500/30 rounded-2xl p-6 flex items-center justify-between relative overflow-hidden group">
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent pointer-events-none" />
               <div className="flex items-center gap-6 relative z-10">
@@ -327,7 +333,6 @@ export default function Dashboard() {
               </div>
             </motion.div>
 
-            {/* Attribute Bars */}
             <motion.div variants={itemVariants} className="bg-card/40 border border-white/5 rounded-2xl p-6 space-y-4 backdrop-blur-md">
               <AttributeMeter 
                 label="Core Strength" 
@@ -353,7 +358,7 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* Achievements / Medal Cabinet */}
+        {/* Achievements */}
         <motion.div variants={itemVariants} className="mt-8 mb-12">
           <div className="flex items-center gap-3 mb-6">
             <Trophy className="w-5 h-5 text-primary" />
@@ -370,23 +375,17 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* Circular Metrics Section */}
-        <motion.div 
-          variants={containerVariants} initial="hidden" animate="show"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-        >
+        {/* Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {circleStats.map((stat, i) => (
             <MetricCircle key={i} {...stat} />
           ))}
-        </motion.div>
+        </div>
 
-        {/* Unified Horizontal Stats Row */}
-        <motion.div 
-          variants={containerVariants} initial="hidden" animate="show"
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 bg-card/20 border border-white/5 p-4 rounded-xl backdrop-blur-sm"
-        >
+        {/* Horizontal Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 bg-card/20 border border-white/5 p-4 rounded-xl backdrop-blur-sm">
           {horizontalStats.map((stat, i) => (
-            <motion.div key={i} variants={itemVariants} className="flex items-center gap-4 px-4 border-r border-white/5 last:border-0">
+            <div key={i} className="flex items-center gap-4 px-4 border-r border-white/5 last:border-0">
               <div className={`p-2 rounded bg-white/5 ${stat.color}`}>
                 <stat.icon className="w-4 h-4" />
               </div>
@@ -394,9 +393,9 @@ export default function Dashboard() {
                 <div className="text-[8px] font-bold text-muted-foreground uppercase tracking-[0.2em]">{stat.title}</div>
                 <div className="text-xl font-display font-bold">{stat.value}<span className="text-[10px] ml-1 opacity-50">{stat.unit}</span></div>
               </div>
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <motion.div 
@@ -430,7 +429,7 @@ export default function Dashboard() {
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground opacity-40">
                   <TrendingUp className="w-12 h-12 mb-2" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Insufficient Historical Data</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Collecting Data Points...</span>
                 </div>
               )}
             </div>
@@ -453,12 +452,12 @@ export default function Dashboard() {
         >
           <div className="flex justify-between items-center mb-6">
             <h3 className="font-display font-bold text-xl uppercase tracking-widest text-glow-small">Mission Log Hub</h3>
-            <Link href="/history" className="text-sm font-bold text-primary hover:underline uppercase tracking-wider">Historical Data</Link>
+            <Link href="/history" className="text-sm font-bold text-primary hover:underline uppercase tracking-wider">Archive</Link>
           </div>
           
           <div className="space-y-4">
             {workoutsLoading ? (
-               <div className="py-8 text-center text-muted-foreground animate-pulse">Retrieving encrypted logs...</div>
+               <div className="py-8 text-center text-muted-foreground animate-pulse">Decrypting local logs...</div>
             ) : (
               workouts?.slice(0, 3).map((workout) => (
                 <div key={workout.id} className="flex items-center justify-between p-5 rounded-xl bg-secondary/20 hover:bg-secondary/40 border border-white/5 hover:border-primary/30 transition-all group">
@@ -468,7 +467,7 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <h4 className="font-bold text-lg font-display tracking-wide">{workout.name}</h4>
-                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{workout.date} // {workout.exercises.length} SUB-ROUTINES</p>
+                      <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em]">{workout.date} // {workout.exercises.length} PROTOCOLS</p>
                     </div>
                   </div>
                   <div className="text-right hidden sm:block">

@@ -8,6 +8,7 @@ type AuthContextType = {
   loading: boolean;
   supabase: typeof supabase;
   signOut: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
   signInWithPassword: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, options?: any) => Promise<{ data: any, error: any }>;
   signInWithOtp: (email: string) => Promise<{ error: any }>;
@@ -64,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading, 
       supabase,
       signOut, 
+      signIn: signInWithPassword,
       signInWithPassword,
       signUp,
       signInWithOtp, 

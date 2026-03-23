@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Fingerprint, Mail, Lock, User, Eye, EyeOff, ArrowRight, ShieldCheck } from "lucide-react";
+import { Loader2, Fingerprint, Mail, Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import GymScene from "@/components/3d/GymScene";
+import { registerSchema } from "@/lib/schemas";
+
+const GymScene = lazy(() => import("@/components/3d/GymScene"));
 
 export default function Register() {
   const [, setLocation] = useLocation();
@@ -23,9 +25,28 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
 
+    // Zod Validation
+    const validation = registerSchema.safeParse({ 
+      email, 
+      password, 
+      username: name.toLowerCase().replace(/\s+/g, '_'), 
+      fullName: name 
+    });
+
+    if (!validation.success) {
+      toast({
+        title: "Validation Error",
+        description: validation.error.errors[0].message,
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     const { error } = await signUp(email, password, {
       data: {
         full_name: name,
+        username: validation.data.username
       },
     });
 
@@ -37,8 +58,6 @@ export default function Register() {
       });
       setLoading(false);
     } else {
-      // If Supabase is configured to confirm emails, it sends an OTP.
-      // We switch to the verify step.
       setStep("verify");
       toast({
         title: "Phase I Complete",
@@ -74,10 +93,11 @@ export default function Register() {
     <div className="min-h-screen bg-[#060608] flex items-center justify-center px-4 relative overflow-hidden font-rajdhani">
       {/* Background Gym Scene (Mobile only) */}
       <div className="fixed inset-0 z-0 pointer-events-none lg:hidden opacity-30">
-        <GymScene />
+        <Suspense fallback={<div className="w-full h-full bg-black/20" />}>
+          <GymScene />
+        </Suspense>
       </div>
 
-      {/* Dynamic Background Effects */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30 z-0">
         <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px]" />
