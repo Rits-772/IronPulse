@@ -67,24 +67,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithPassword = async (email: string, password: string) => {
     setLoading(true);
-    const res = await supabase.auth.signInWithPassword({ email, password });
-    if (!res.error && res.data.session) {
-      setSession(res.data.session);
-      setUser(res.data.session.user);
+    try {
+      const res = await supabase.auth.signInWithPassword({ 
+        email: email.trim(), 
+        password 
+      });
+      if (!res.error && res.data.session) {
+        setSession(res.data.session);
+        setUser(res.data.session.user);
+      }
+      setLoading(false);
+      return { error: res.error };
+    } catch (err: any) {
+      setLoading(false);
+      return { error: err };
     }
-    setLoading(false);
-    return { error: res.error };
   };
 
   const signUp = async (email: string, password: string, options?: any) => {
     setLoading(true);
-    const res = await supabase.auth.signUp({ email, password, options });
-    if (!res.error && res.data.session) {
-      setSession(res.data.session);
-      setUser(res.data.session.user);
+    try {
+      const res = await supabase.auth.signUp({ 
+        email: email.trim(), 
+        password, 
+        options 
+      });
+      if (!res.error && res.data.session) {
+        setSession(res.data.session);
+        setUser(res.data.session.user);
+      }
+      setLoading(false);
+      return res;
+    } catch (err: any) {
+      setLoading(false);
+      return { data: { user: null, session: null }, error: err };
     }
-    setLoading(false);
-    return res;
   };
 
   const signOut = async () => {
@@ -98,9 +115,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetPassword = async (email: string) => {
-    return await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/settings`
-    });
+    try {
+      return await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/settings`
+      });
+    } catch (err: any) {
+      return { data: null, error: err };
+    }
   };
 
   return (

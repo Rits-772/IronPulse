@@ -1,5 +1,5 @@
 // IronPulse Service Worker - Offline Protocol Cache
-const CACHE_NAME = 'ironpulse-v1.0.0';
+const CACHE_NAME = 'ironpulse-v1.0.1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

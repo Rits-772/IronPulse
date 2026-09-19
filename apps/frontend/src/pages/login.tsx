@@ -43,9 +43,16 @@ export default function Login() {
     const { error } = await signIn(email, password);
 
     if (error) {
+      let desc = error.message || "Invalid email vector or passcode sequence.";
+      const lower = desc.toLowerCase();
+      if (lower.includes("email not confirmed") || lower.includes("not confirmed")) {
+        desc = "Email vector pending confirmation. Check your inbox, or disable 'Confirm email' in Supabase Dashboard (Auth > Providers > Email).";
+      } else if (lower.includes("failed to fetch") || lower.includes("fetch")) {
+        desc = "Connection uplink failed. Please refresh your browser cache (Ctrl+F5 or Shift+Reload) to purge stale network tokens.";
+      }
       toast({
         title: "Authentication Failed",
-        description: error.message || "Invalid email vector or passcode sequence.",
+        description: desc,
         variant: "destructive",
       });
       setLoading(false);
