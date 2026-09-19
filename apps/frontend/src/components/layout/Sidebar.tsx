@@ -68,7 +68,7 @@ const navItems = [
 ];
 
 export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, signOut } = useAuth();
   const { data: profile } = useProfile();
 
@@ -147,7 +147,10 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
                 </Link>
                 <div className="h-px bg-white/5 my-1" />
                 <button 
-                  onClick={() => signOut()}
+                  onClick={async () => {
+                    await signOut();
+                    setLocation("/login");
+                  }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all group"
                 >
                   <LogOut className="w-4 h-4" />

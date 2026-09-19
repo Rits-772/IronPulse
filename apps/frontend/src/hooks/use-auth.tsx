@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User, Session, AuthError } from '@supabase/supabase-js';
 
-// Default Operative User for seamless instant access
+// Default Demo Operative User for optional one-click sandbox testing
 export const DEMO_USER: User = {
   id: '00000000-0000-0000-0000-000000000001',
   app_metadata: { provider: 'email' },
@@ -20,62 +20,130 @@ export const DEMO_USER: User = {
 };
 
 export const DEMO_SESSION: Session = {
-  access_token: 'mock-access-token',
+  access_token: 'demo-access-token',
   token_type: 'bearer',
   expires_in: 3600 * 24 * 365,
-  refresh_token: 'mock-refresh-token',
+  refresh_token: 'demo-refresh-token',
   user: DEMO_USER,
 };
 
 type AuthContextType = {
-  user: User;
+  user: User | null;
   session: Session | null;
   loading: boolean;
-  isBypassMode: boolean;
+  isDemoMode: boolean;
   supabase: typeof supabase;
   signOut: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signInWithPassword: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, options?: any) => Promise<{ data: any; error: any }>;
-  signInWithOtp: (email: string) => Promise<{ error: any }>;
-  verifyOtp: (email: string, token: string, type: 'email' | 'signup') => Promise<{ error: any }>;
-  enableBypass: () => void;
+  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signInWithPassword: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signUp: (email: string, password: string, options?: any) => Promise<{ data: any; error: AuthError | null }>;
+  signInAsDemo: () => void;
+  resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User>(DEMO_USER);
-  const [session, setSession] = useState<Session | null>(DEMO_SESSION);
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   useEffect(() => {
-    // Try to get real session from Supabase if active
-    supabase.auth.getSession().then(({ data: { session: realSession } }) => {
-      if (realSession && realSession.user) {
-        setSession(realSession);
-        setUser(realSession.user);
+    let isMounted = true;
+
+    // 1. Check if demo mode was explicitly active in this browser session
+    const isDemo = localStorage.getItem('ironpulse_demo_auth') === 'true';
+    if (isDemo) {
+      if (isMounted) {
+        setUser(DEMO_USER);
+        setSession(DEMO_SESSION);
+        setIsDemoMode(true);
+        setLoading(false);
       }
+      return;
+    }
+
+    // 2. Fetch live Supabase session
+    supabase.auth.getSession().then(({ data: { session: initialSession }, error }) => {
+      if (!isMounted) return;
+      if (!error && initialSession && initialSession.user) {
+        setSession(initialSession);
+        setUser(initialSession.user);
+        setIsDemoMode(false);
+      } else {
+        setSession(null);
+        setUser(null);
+      }
+      setLoading(false);
     }).catch(() => {
-      // fallback to DEMO_USER
+      if (isMounted) {
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      }
     });
 
+    // 3. Listen to auth state changes in real-time
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      if (!isMounted) return;
       if (newSession && newSession.user) {
         setSession(newSession);
         setUser(newSession.user);
-      } else {
-        setSession(DEMO_SESSION);
-        setUser(DEMO_USER);
+        setIsDemoMode(false);
+        localStorage.removeItem('ironpulse_demo_auth');
+      } else if (!isDemoMode) {
+        setSession(null);
+        setUser(null);
       }
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [isDemoMode]);
 
-  const signOut = async () => {
+  const signInWithPassword = async (email: string, password: string) => {
+    setLoading(true);
+    localStorage.removeItem('ironpulse_demo_auth');
+    setIsDemoMode(false);
+    const res = await supabase.auth.signInWithPassword({ email, password });
+    if (!res.error && res.data.session) {
+      setSession(res.data.session);
+      setUser(res.data.session.user);
+    }
+    setLoading(false);
+    return { error: res.error };
+  };
+
+  const signUp = async (email: string, password: string, options?: any) => {
+    setLoading(true);
+    localStorage.removeItem('ironpulse_demo_auth');
+    setIsDemoMode(false);
+    const res = await supabase.auth.signUp({ email, password, options });
+    if (!res.error && res.data.session) {
+      setSession(res.data.session);
+      setUser(res.data.session.user);
+    }
+    setLoading(false);
+    return res;
+  };
+
+  const signInAsDemo = () => {
+    localStorage.setItem('ironpulse_demo_auth', 'true');
     setUser(DEMO_USER);
     setSession(DEMO_SESSION);
+    setIsDemoMode(true);
+    setLoading(false);
+  };
+
+  const signOut = async () => {
+    localStorage.removeItem('ironpulse_demo_auth');
+    setUser(null);
+    setSession(null);
+    setIsDemoMode(false);
     try {
       await supabase.auth.signOut();
     } catch {
@@ -83,30 +151,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const enableBypass = () => {
-    setUser(DEMO_USER);
-    setSession(DEMO_SESSION);
-  };
-
-  const signInWithPassword = async (email: string, password: string) => {
-    const res = await supabase.auth.signInWithPassword({ email, password });
-    if (!res.error && res.data.session) {
-      setSession(res.data.session);
-      setUser(res.data.session.user);
-    }
-    return res;
-  };
-
-  const signUp = async (email: string, password: string, options?: any) => {
-    return await supabase.auth.signUp({ email, password, options });
-  };
-
-  const signInWithOtp = async (email: string) => {
-    return await supabase.auth.signInWithOtp({ email });
-  };
-
-  const verifyOtp = async (email: string, token: string, type: 'email' | 'signup' = 'email') => {
-    return await supabase.auth.verifyOtp({ email, token, type });
+  const resetPassword = async (email: string) => {
+    return await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/settings`
+    });
   };
 
   return (
@@ -114,15 +162,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user, 
       session, 
       loading, 
-      isBypassMode: true,
+      isDemoMode,
       supabase,
       signOut, 
       signIn: signInWithPassword,
       signInWithPassword,
       signUp,
-      signInWithOtp, 
-      verifyOtp,
-      enableBypass,
+      signInAsDemo,
+      resetPassword,
     }}>
       {children}
     </AuthContext.Provider>

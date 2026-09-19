@@ -48,56 +48,24 @@ export function calculate1RM(weight: number, reps: number): number {
 }
 
 // --- SEED DEFAULTS FOR LOCAL / OFFLINE SANDBOX ---
-const DEFAULT_WORKOUTS = [
-  {
-    id: "w-bench-01",
-    name: "Heavy Upper Hypertrophy",
-    date: new Date(Date.now() - 1000 * 3600 * 24 * 1).toLocaleDateString('en-CA'),
-    exercises: [
-      { name: "Barbell Flat Bench Press", sets: 4, reps: 8, weight: 225, muscle_group: "Chest" },
-      { name: "Incline Dumbbell Press", sets: 3, reps: 10, weight: 80, muscle_group: "Chest" },
-      { name: "Overhand Barbell Bent-Over Row", sets: 4, reps: 8, weight: 185, muscle_group: "Back" },
-      { name: "Standing Barbell Bicep Curl", sets: 3, reps: 12, weight: 85, muscle_group: "Arms" }
-    ],
-    volume: 14820,
-    duration: 55
-  },
-  {
-    id: "w-squat-02",
-    name: "Quad & Glute Power Matrix",
-    date: new Date(Date.now() - 1000 * 3600 * 24 * 3).toLocaleDateString('en-CA'),
-    exercises: [
-      { name: "Barbell Back Squat", sets: 5, reps: 5, weight: 315, muscle_group: "Legs" },
-      { name: "Romanian Deadlift (RDL)", sets: 4, reps: 8, weight: 245, muscle_group: "Legs" },
-      { name: "Standing Calf Raise", sets: 4, reps: 15, weight: 150, muscle_group: "Legs" }
-    ],
-    volume: 18940,
-    duration: 65
-  },
-  {
-    id: "w-deadlift-03",
-    name: "Posterior Chain Kinetic Peak",
-    date: new Date(Date.now() - 1000 * 3600 * 24 * 5).toLocaleDateString('en-CA'),
-    exercises: [
-      { name: "Conventional Barbell Deadlift", sets: 5, reps: 3, weight: 405, muscle_group: "Back" },
-      { name: "Weighted Pull-Ups", sets: 4, reps: 8, weight: 45, muscle_group: "Back" },
-      { name: "Cable Face Pull", sets: 4, reps: 15, weight: 60, muscle_group: "Shoulders" }
-    ],
-    volume: 16200,
-    duration: 50
-  }
-];
+const DEFAULT_WORKOUTS: any[] = [];
 
 function getStoredWorkouts(): any[] {
   try {
     const raw = localStorage.getItem('ironpulse_local_workouts');
     if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        // Auto-purge legacy mock workouts
+        const cleaned = parsed.filter((w: any) => !['w-bench-01', 'w-squat-02', 'w-deadlift-03'].includes(w.id));
+        if (cleaned.length !== parsed.length) {
+          saveStoredWorkouts(cleaned);
+        }
+        return cleaned;
+      }
     }
   } catch {}
-  saveStoredWorkouts(DEFAULT_WORKOUTS);
-  return DEFAULT_WORKOUTS;
+  return [];
 }
 
 function saveStoredWorkouts(workouts: any[]): void {
@@ -106,39 +74,23 @@ function saveStoredWorkouts(workouts: any[]): void {
   } catch {}
 }
 
-const DEFAULT_METRICS: BodyMetric[] = [
-  {
-    id: "bm-01",
-    user_id: '00000000-0000-0000-0000-000000000001',
-    weight_kg: 84.5,
-    body_fat: 13.8,
-    chest_cm: 108,
-    waist_cm: 82,
-    arms_cm: 41,
-    recorded_at: new Date(Date.now() - 1000 * 3600 * 24 * 14).toLocaleDateString('en-CA')
-  },
-  {
-    id: "bm-02",
-    user_id: '00000000-0000-0000-0000-000000000001',
-    weight_kg: 83.8,
-    body_fat: 13.2,
-    chest_cm: 109,
-    waist_cm: 81,
-    arms_cm: 41.5,
-    recorded_at: new Date().toLocaleDateString('en-CA')
-  }
-];
+const DEFAULT_METRICS: BodyMetric[] = [];
 
 function getStoredMetrics(): BodyMetric[] {
   try {
     const raw = localStorage.getItem('ironpulse_local_metrics');
     if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter((m: any) => !['bm-01', 'bm-02'].includes(m.id));
+        if (cleaned.length !== parsed.length) {
+          saveStoredMetrics(cleaned);
+        }
+        return cleaned;
+      }
     }
   } catch {}
-  saveStoredMetrics(DEFAULT_METRICS);
-  return DEFAULT_METRICS;
+  return [];
 }
 
 function saveStoredMetrics(metrics: BodyMetric[]): void {
@@ -207,13 +159,7 @@ export function useMuscleDistribution() {
       });
 
       if (Object.keys(distribution).length === 0) {
-        return [
-          { name: 'CHEST', value: 4500 },
-          { name: 'BACK', value: 5200 },
-          { name: 'LEGS', value: 6800 },
-          { name: 'ARMS', value: 2400 },
-          { name: 'SHOULDERS', value: 2100 }
-        ];
+        return [];
       }
 
       return Object.entries(distribution).map(([name, value]) => ({
@@ -328,11 +274,7 @@ export function useProgressData() {
 
       const values = Object.values(progress);
       if (values.length === 0) {
-        return [
-          { date: 'Jul', squat: 275, bench: 205, deadlift: 365 },
-          { date: 'Aug', squat: 295, bench: 215, deadlift: 385 },
-          { date: 'Sep', squat: 315, bench: 225, deadlift: 405 },
-        ];
+        return [];
       }
       return values;
     }
@@ -585,6 +527,21 @@ export function useProfile() {
             saveStoredProfile(data as Profile);
             return data as Profile;
           }
+
+          // Fallback to active user metadata
+          const dynamicProfile: Profile = {
+            id: user.id,
+            username: user.user_metadata?.username || user.email?.split('@')[0] || 'OPERATIVE',
+            full_name: user.user_metadata?.full_name || user.user_metadata?.username || 'Operative Subject',
+            height_cm: 175,
+            weight_goal: 80,
+            body_fat_goal: 12,
+            avatar_url: user.user_metadata?.avatar_url || '',
+            xp: 0,
+            level: 1,
+          };
+          saveStoredProfile(dynamicProfile);
+          return dynamicProfile;
         }
       } catch {}
       return getStoredProfile();
@@ -800,29 +757,23 @@ export interface Nutrition {
   water_ml: number;
 }
 
-const DEFAULT_NUTRITION: Nutrition[] = [
-  {
-    id: "n-today",
-    user_id: '00000000-0000-0000-0000-000000000001',
-    date: new Date().toLocaleDateString('en-CA'),
-    calories: 2650,
-    protein: 195,
-    carbs: 280,
-    fats: 68,
-    water_ml: 3500
-  }
-];
+const DEFAULT_NUTRITION: Nutrition[] = [];
 
 function getStoredNutrition(): Nutrition[] {
   try {
     const raw = localStorage.getItem('ironpulse_local_nutrition');
     if (raw !== null) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter((n: any) => !['n-today'].includes(n.id));
+        if (cleaned.length !== parsed.length) {
+          saveStoredNutrition(cleaned);
+        }
+        return cleaned;
+      }
     }
   } catch {}
-  saveStoredNutrition(DEFAULT_NUTRITION);
-  return DEFAULT_NUTRITION;
+  return [];
 }
 
 function saveStoredNutrition(nutrition: Nutrition[]): void {
@@ -927,13 +878,7 @@ export function usePersonalRecords() {
       });
 
       if (Object.keys(records).length === 0) {
-        return [
-          { name: "Conventional Barbell Deadlift", weight: 405 },
-          { name: "Barbell Back Squat", weight: 315 },
-          { name: "Barbell Flat Bench Press", weight: 225 },
-          { name: "Standing Overhead Barbell Press (OHP)", weight: 145 },
-          { name: "Overhand Barbell Bent-Over Row", weight: 185 }
-        ];
+        return [];
       }
 
       return Object.entries(records).map(([name, weight]) => ({

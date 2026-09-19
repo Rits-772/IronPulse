@@ -69,8 +69,8 @@ export default function Landing() {
           <h1 className="text-2xl font-display font-bold uppercase tracking-widest text-glow">Iron<span className="text-primary">Pulse</span></h1>
         </div>
         <div className="flex gap-4 items-center">
-          <Link href="/dashboard" className="text-foreground/80 hover:text-primary font-medium text-sm tracking-wider uppercase transition-colors">Access Console</Link>
-          <Link href="/dashboard" className="px-5 py-2 bg-primary text-black font-bold uppercase tracking-wider text-sm rounded-md hover:bg-primary/90 transition-all box-glow hidden sm:block">Launch App</Link>
+          <Link href="/login" className="text-foreground/80 hover:text-primary font-medium text-sm tracking-wider uppercase transition-colors">Sign In</Link>
+          <Link href="/register" className="px-5 py-2 bg-primary text-black font-bold uppercase tracking-wider text-sm rounded-md hover:bg-primary/90 transition-all box-glow hidden sm:block">Enroll Operative</Link>
         </div>
       </nav>
 
@@ -100,11 +100,11 @@ export default function Landing() {
               Step into the future of strength training. IronPulse merges raw iron with cyberpunk analytics to give you absolute control over your physical evolution.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/dashboard" className="group px-8 py-4 bg-primary text-black font-display font-bold text-lg md:text-xl uppercase tracking-widest rounded-lg hover:bg-primary/90 transition-all box-glow flex items-center justify-center gap-2">
-                Launch Protocol <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <Link href="/register" className="group px-8 py-4 bg-primary text-black font-display font-bold text-lg md:text-xl uppercase tracking-widest rounded-lg hover:bg-primary/90 transition-all box-glow flex items-center justify-center gap-2">
+                Commence Protocol <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <Link href="/dashboard" className="px-8 py-4 bg-white/5 backdrop-blur-md border border-white/10 text-white font-display font-bold text-lg md:text-xl uppercase tracking-widest rounded-lg hover:bg-white/10 transition-all flex items-center justify-center">
-                Enter Console
+              <Link href="/login" className="px-8 py-4 bg-white/5 backdrop-blur-md border border-white/10 text-white font-display font-bold text-lg md:text-xl uppercase tracking-widest rounded-lg hover:bg-white/10 transition-all flex items-center justify-center">
+                Authenticate Uplink
               </Link>
             </div>
           </div>

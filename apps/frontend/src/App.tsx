@@ -179,12 +179,8 @@ function Router() {
     <Suspense fallback={<PageLoader />}>
       <Switch>
         <Route path="/" component={Landing} />
-        <Route path="/login">
-          <Redirect to="/dashboard" />
-        </Route>
-        <Route path="/register">
-          <Redirect to="/dashboard" />
-        </Route>
+        <Route path="/login" component={Login} />
+        <Route path="/register" component={Register} />
         
         {/* Protected Area */}
         <Route path="/dashboard">

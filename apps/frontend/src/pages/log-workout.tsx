@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Plus, Save, Trash2, Dumbbell, Timer, Loader2, Minus, Sparkles, WifiOff } from "lucide-react";
+import { Plus, Save, Trash2, Dumbbell, Timer, Loader2, Minus, Sparkles, WifiOff, Library } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -14,8 +14,9 @@ function CounterInput({ value, onChange, placeholder, unit }: { value: string, o
   const current = parseFloat(value) || 0;
   
   return (
-    <div className="flex items-center bg-background border border-white/5 rounded-lg overflow-hidden focus-within:border-primary/50 transition-all group">
+    <div className="flex items-center bg-background border border-white/10 rounded-lg overflow-hidden focus-within:border-primary/50 transition-all group">
       <button 
+        type="button"
         onClick={() => onChange((Math.max(0, current - 1)).toString())}
         className="px-2 py-2 hover:bg-white/5 text-muted-foreground hover:text-primary transition-colors"
       >
@@ -27,13 +28,14 @@ function CounterInput({ value, onChange, placeholder, unit }: { value: string, o
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full bg-transparent border-none py-2 text-center font-mono text-sm focus:ring-0 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="w-full bg-transparent border-none py-2 text-center font-mono text-sm focus:ring-0 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-muted-foreground/30"
         />
         {unit && value && (
           <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[8px] font-bold text-muted-foreground opacity-50">{unit}</span>
         )}
       </div>
       <button 
+        type="button"
         onClick={() => onChange((current + 1).toString())}
         className="px-2 py-2 hover:bg-white/5 text-muted-foreground hover:text-primary transition-colors"
       >
@@ -88,6 +90,7 @@ function RestTimer() {
         {[60, 90, 180].map((s) => (
           <button 
             key={s} 
+            type="button"
             onClick={() => startTimer(s)}
             className="px-3 py-1 bg-secondary/50 border border-white/5 rounded text-[10px] font-bold uppercase hover:bg-primary hover:text-black transition-all"
           >
@@ -96,6 +99,7 @@ function RestTimer() {
         ))}
         {isActive && (
           <button 
+            type="button"
             onClick={() => setIsActive(false)}
             className="px-3 py-1 bg-red-500/10 border border-red-500/20 text-red-500 rounded text-[10px] font-bold uppercase"
           >
@@ -113,9 +117,7 @@ export default function LogWorkout() {
   const saveWorkout = useSaveWorkout();
   const [workoutName, setWorkoutName] = useState("");
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
-  const [exercises, setExercises] = useState<ExerciseEntry[]>([
-    { id: '1', name: "Barbell Back Squat", sets: [{ reps: "10", weight: "135" }, { reps: "10", weight: "135" }, { reps: "10", weight: "135" }] }
-  ]);
+  const [exercises, setExercises] = useState<ExerciseEntry[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -125,7 +127,9 @@ export default function LogWorkout() {
     if (prefillEx) {
       try {
         const decoded = JSON.parse(decodeURIComponent(prefillEx));
-        setExercises(decoded);
+        if (Array.isArray(decoded) && decoded.length > 0) {
+          setExercises(decoded);
+        }
       } catch (e) {
         console.error("Failed to parse prefill exercises", e);
       }
@@ -137,15 +141,30 @@ export default function LogWorkout() {
   }, []);
 
   const handleSelectFromDatabase = (exercise: ExerciseDefinition) => {
-    setExercises([
-      ...exercises,
+    setExercises(prev => [
+      ...prev,
       {
         id: Math.random().toString(),
         name: exercise.name,
         sets: [
-          { reps: "10", weight: "135" },
-          { reps: "10", weight: "135" },
-          { reps: "10", weight: "135" }
+          { reps: "", weight: "" },
+          { reps: "", weight: "" },
+          { reps: "", weight: "" }
+        ]
+      }
+    ]);
+  };
+
+  const handleAddCustomExercise = () => {
+    setExercises(prev => [
+      ...prev,
+      {
+        id: Math.random().toString(),
+        name: "Custom Movement Vector",
+        sets: [
+          { reps: "", weight: "" },
+          { reps: "", weight: "" },
+          { reps: "", weight: "" }
         ]
       }
     ]);
@@ -158,7 +177,7 @@ export default function LogWorkout() {
   const addSet = (exerciseId: string) => {
     setExercises(exercises.map(e => {
       if (e.id === exerciseId) {
-        const lastSet = e.sets[e.sets.length - 1] || { reps: "10", weight: "135" };
+        const lastSet = e.sets[e.sets.length - 1] || { reps: "", weight: "" };
         return { ...e, sets: [...e.sets, { reps: lastSet.reps, weight: lastSet.weight }] };
       }
       return e;
@@ -186,6 +205,15 @@ export default function LogWorkout() {
   };
 
   const handleSave = async () => {
+    if (exercises.length === 0) {
+      toast({
+        title: "No Movements Queued",
+        description: "Please add at least one exercise movement before committing this session.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const finalName = workoutName.trim() || "CYBERNETIC PROTOCOL SESSION";
 
     // If device is offline, enqueue locally
@@ -234,6 +262,12 @@ export default function LogWorkout() {
     }
   };
 
+  const totalVolume = exercises.reduce((total, ex) => 
+    total + ex.sets.reduce((exTotal, s) => 
+      exTotal + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0
+    ), 0
+  );
+
   return (
     <DashboardLayout>
       <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 pb-16">
@@ -251,11 +285,7 @@ export default function LogWorkout() {
               <div className="flex items-center gap-4 text-[10px] text-primary font-mono font-bold tracking-[0.2em] uppercase mt-2">
                 <span className="flex items-center gap-1.5 opacity-80">
                   <Dumbbell className="w-3.5 h-3.5" /> 
-                  {exercises.reduce((total, ex) => 
-                    total + ex.sets.reduce((exTotal, s) => 
-                      exTotal + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0
-                    ), 0
-                  ).toLocaleString()} LBS DISPLACED
+                  {totalVolume.toLocaleString()} LBS DISPLACED
                 </span>
               </div>
             </div>
@@ -271,104 +301,146 @@ export default function LogWorkout() {
 
           {/* Exercise List */}
           <div className="space-y-5">
-            <AnimatePresence>
-              {exercises.map((exercise, exerciseIdx) => (
-                <motion.div 
-                  key={exercise.id}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-xl"
-                >
-                  {/* Exercise Header */}
-                  <div className="bg-secondary/40 p-4 border-b border-white/5 flex justify-between items-center">
-                    <div className="flex items-center gap-2 flex-1">
-                      <span className="w-6 h-6 rounded bg-primary/10 text-primary text-xs font-mono font-bold flex items-center justify-center shrink-0">
-                        {exerciseIdx + 1}
-                      </span>
-                      <input 
-                        type="text"
-                        value={exercise.name}
-                        onChange={(e) => {
-                          const newExercises = [...exercises];
-                          newExercises[exerciseIdx].name = e.target.value;
-                          setExercises(newExercises);
-                        }}
-                        className="bg-transparent border-none text-lg font-display font-bold uppercase tracking-wider focus:outline-none w-full text-white"
-                      />
+            {exercises.length === 0 ? (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-card/40 backdrop-blur-xl border border-dashed border-white/10 rounded-3xl p-10 text-center space-y-5 shadow-xl"
+              >
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 mx-auto flex items-center justify-center text-primary shadow-[0_0_20px_rgba(57,255,20,0.15)]">
+                  <Dumbbell className="w-8 h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-2xl font-display font-black uppercase tracking-wider text-white">
+                    No Movements Queued
+                  </h3>
+                  <p className="text-xs text-muted-foreground font-mono max-w-md mx-auto">
+                    Assemble your active protocol by selecting verified movements from the Exercise Vault or adding a custom exercise.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3 justify-center pt-2">
+                  <button 
+                    type="button"
+                    onClick={() => setIsSelectorOpen(true)}
+                    className="px-6 py-3.5 bg-primary text-black font-display font-black uppercase tracking-widest text-xs rounded-xl hover:scale-105 transition-all flex items-center gap-2 box-glow"
+                  >
+                    <Library className="w-4 h-4" /> Exercise Vault (80+ Movements)
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={handleAddCustomExercise}
+                    className="px-6 py-3.5 bg-white/5 border border-white/10 text-white font-display font-bold uppercase tracking-widest text-xs rounded-xl hover:bg-white/10 transition-all flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4 text-muted-foreground" /> Add Custom Row
+                  </button>
+                </div>
+              </motion.div>
+            ) : (
+              <AnimatePresence>
+                {exercises.map((exercise, exerciseIdx) => (
+                  <motion.div 
+                    key={exercise.id}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-xl"
+                  >
+                    {/* Exercise Header */}
+                    <div className="bg-secondary/40 p-4 border-b border-white/5 flex justify-between items-center">
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="w-6 h-6 rounded bg-primary/10 text-primary text-xs font-mono font-bold flex items-center justify-center shrink-0">
+                          {exerciseIdx + 1}
+                        </span>
+                        <input 
+                          type="text"
+                          value={exercise.name}
+                          onChange={(e) => {
+                            const newExercises = [...exercises];
+                            newExercises[exerciseIdx].name = e.target.value;
+                            setExercises(newExercises);
+                          }}
+                          className="bg-transparent border-none text-lg font-display font-bold uppercase tracking-wider focus:outline-none w-full text-white"
+                        />
+                      </div>
+                      <button 
+                        type="button"
+                        onClick={() => removeExercise(exercise.id)} 
+                        className="text-muted-foreground hover:text-rose-400 transition-colors p-2"
+                        title="Remove Exercise"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => removeExercise(exercise.id)} 
-                      className="text-muted-foreground hover:text-rose-400 transition-colors p-2"
-                      title="Remove Exercise"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
 
-                  {/* Sets */}
-                  <div className="p-4 space-y-2">
-                    <div className="grid grid-cols-12 gap-2 text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest px-2 mb-2">
-                      <div className="col-span-2 text-center">Set</div>
-                      <div className="col-span-4 text-center">Weight (LBS)</div>
-                      <div className="col-span-4 text-center">Reps</div>
-                      <div className="col-span-2"></div>
+                    {/* Sets */}
+                    <div className="p-4 space-y-2">
+                      <div className="grid grid-cols-12 gap-2 text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest px-2 mb-2">
+                        <div className="col-span-2 text-center">Set</div>
+                        <div className="col-span-4 text-center">Weight (LBS)</div>
+                        <div className="col-span-4 text-center">Reps</div>
+                        <div className="col-span-2"></div>
+                      </div>
+                      
+                      <AnimatePresence>
+                        {exercise.sets.map((set, setIdx) => (
+                          <motion.div 
+                            key={setIdx}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="grid grid-cols-12 gap-2 items-center"
+                          >
+                            <div className="col-span-2 text-center font-bold text-muted-foreground font-mono text-xs">{setIdx + 1}</div>
+                            <div className="col-span-4">
+                              <CounterInput 
+                                value={set.weight}
+                                onChange={(val) => updateSet(exercise.id, setIdx, 'weight', val)}
+                                placeholder="0"
+                                unit="LBS"
+                              />
+                            </div>
+                            <div className="col-span-4">
+                              <CounterInput 
+                                value={set.reps}
+                                onChange={(val) => updateSet(exercise.id, setIdx, 'reps', val)}
+                                placeholder="0"
+                              />
+                            </div>
+                            <div className="col-span-2 flex justify-center">
+                              <button 
+                                type="button"
+                                onClick={() => removeSet(exercise.id, setIdx)} 
+                                className="text-muted-foreground hover:text-rose-400 transition-colors p-1.5"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+
+                      <button 
+                        type="button"
+                        onClick={() => addSet(exercise.id)}
+                        className="w-full mt-3 py-2 border border-dashed border-white/10 text-muted-foreground rounded-lg hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all text-xs font-mono uppercase tracking-widest flex items-center justify-center gap-2"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Set
+                      </button>
                     </div>
-                    
-                    <AnimatePresence>
-                      {exercise.sets.map((set, setIdx) => (
-                        <motion.div 
-                          key={setIdx}
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="grid grid-cols-12 gap-2 items-center"
-                        >
-                          <div className="col-span-2 text-center font-bold text-muted-foreground font-mono text-xs">{setIdx + 1}</div>
-                          <div className="col-span-4">
-                            <CounterInput 
-                              value={set.weight}
-                              onChange={(val) => updateSet(exercise.id, setIdx, 'weight', val)}
-                              placeholder="0"
-                              unit="LBS"
-                            />
-                          </div>
-                          <div className="col-span-4">
-                            <CounterInput 
-                              value={set.reps}
-                              onChange={(val) => updateSet(exercise.id, setIdx, 'reps', val)}
-                              placeholder="0"
-                            />
-                          </div>
-                          <div className="col-span-2 flex justify-center">
-                            <button 
-                              onClick={() => removeSet(exercise.id, setIdx)} 
-                              className="text-muted-foreground hover:text-rose-400 transition-colors p-1.5"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-
-                    <button 
-                      onClick={() => addSet(exercise.id)}
-                      className="w-full mt-3 py-2 border border-dashed border-white/10 text-muted-foreground rounded-lg hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all text-xs font-mono uppercase tracking-widest flex items-center justify-center gap-2"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Add Set
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            )}
             
-            <button 
-              onClick={() => setIsSelectorOpen(true)}
-              className="w-full py-4 bg-secondary/30 text-white font-display font-bold text-sm uppercase tracking-[0.2em] rounded-2xl hover:bg-secondary/50 hover:border-primary/40 transition-all border border-white/10 flex items-center justify-center gap-2 group"
-            >
-              <Plus className="w-5 h-5 text-primary group-hover:scale-125 transition-transform" /> Add Protocol Movement (80+ Available)
-            </button>
+            {exercises.length > 0 && (
+              <button 
+                type="button"
+                onClick={() => setIsSelectorOpen(true)}
+                className="w-full py-4 bg-secondary/30 text-white font-display font-bold text-sm uppercase tracking-[0.2em] rounded-2xl hover:bg-secondary/50 hover:border-primary/40 transition-all border border-white/10 flex items-center justify-center gap-2 group"
+              >
+                <Plus className="w-5 h-5 text-primary group-hover:scale-125 transition-transform" /> Add Protocol Movement (80+ Available)
+              </button>
+            )}
           </div>
         </div>
 
@@ -385,11 +457,7 @@ export default function LogWorkout() {
                 <div className="flex justify-between items-center text-xs">
                   <span className="text-muted-foreground uppercase">Displaced Volume</span>
                   <span className="text-primary font-bold">
-                    {exercises.reduce((total, ex) => 
-                      total + ex.sets.reduce((exTotal, s) => 
-                        exTotal + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0
-                      ), 0
-                    ).toLocaleString()} LBS
+                    {totalVolume.toLocaleString()} LBS
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
