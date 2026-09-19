@@ -68,9 +68,13 @@ export default function Register() {
     });
 
     if (error) {
+      let desc = error.message || "Failed to initialize operative identity.";
+      if (error.message?.toLowerCase().includes("rate limit")) {
+        desc = "Supabase email rate limit reached (3-4/hour on free tier). Disable 'Confirm email' in Supabase Dashboard (Auth > Providers > Email) for instant password signup without email limits.";
+      }
       toast({
-        title: "Registration Failed",
-        description: error.message || "Failed to initialize operative identity.",
+        title: "Registration Paused",
+        description: desc,
         variant: "destructive",
       });
       setLoading(false);
