@@ -9,7 +9,7 @@ import { registerSchema } from "@/lib/schemas";
 export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, loading: authLoading, signUp, signInAsDemo } = useAuth();
+  const { user, loading: authLoading, signUp } = useAuth();
   
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -18,7 +18,6 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
   const [isSuccessConfirmation, setIsSuccessConfirmation] = useState(false);
 
   useEffect(() => {
@@ -93,16 +92,6 @@ export default function Register() {
         setLoading(false);
       }
     }
-  };
-
-  const handleDemoLogin = () => {
-    setDemoLoading(true);
-    signInAsDemo();
-    toast({
-      title: "Demo Operative Activated",
-      description: "Sandbox protocol commenced with default telemetry profile.",
-    });
-    setLocation("/dashboard");
   };
 
   return (
@@ -184,7 +173,7 @@ export default function Register() {
                   onChange={(e) => setName(e.target.value)}
                   className="w-full bg-black/60 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono text-sm placeholder:text-muted-foreground/30"
                   placeholder="e.g. Alex Vance"
-                  disabled={loading || demoLoading}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -202,7 +191,7 @@ export default function Register() {
                   onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
                   className="w-full bg-black/60 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono text-sm placeholder:text-muted-foreground/30"
                   placeholder="nexus_operative"
-                  disabled={loading || demoLoading}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -220,7 +209,7 @@ export default function Register() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-black/60 border border-white/10 rounded-2xl pl-12 pr-4 py-3 text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono text-sm placeholder:text-muted-foreground/30"
                   placeholder="operative@domain.com"
-                  disabled={loading || demoLoading}
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -240,7 +229,7 @@ export default function Register() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="w-full bg-black/60 border border-white/10 rounded-2xl pl-10 pr-10 py-3 text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono text-sm placeholder:text-muted-foreground/30"
                     placeholder="••••••••"
-                    disabled={loading || demoLoading}
+                    disabled={loading}
                   />
                   <button 
                     type="button"
@@ -266,7 +255,7 @@ export default function Register() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full bg-black/60 border border-white/10 rounded-2xl pl-10 pr-3.5 py-3 text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all font-mono text-sm placeholder:text-muted-foreground/30"
                     placeholder="••••••••"
-                    disabled={loading || demoLoading}
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -274,7 +263,7 @@ export default function Register() {
 
             <button 
               type="submit"
-              disabled={loading || demoLoading}
+              disabled={loading}
               className="w-full py-4 bg-accent text-black font-display font-black text-base uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_30px_rgba(0,212,255,0.2)] flex items-center justify-center gap-3 group relative overflow-hidden mt-3 disabled:opacity-50"
             >
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-[-20deg]" />
@@ -289,45 +278,16 @@ export default function Register() {
           </form>
         )}
 
-        {/* Divider */}
+        {/* Footer */}
         {!isSuccessConfirmation && (
-          <>
-            <div className="relative my-5 text-center">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10" />
-              </div>
-              <span className="relative bg-[#0b0c10] px-3 text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
-                or instant evaluation
-              </span>
-            </div>
-
-            {/* Demo One-Click Login */}
-            <button 
-              type="button"
-              onClick={handleDemoLogin}
-              disabled={loading || demoLoading}
-              className="w-full py-3 bg-white/5 border border-white/10 hover:border-accent/40 hover:bg-accent/5 text-white font-display font-bold text-xs uppercase tracking-[0.2em] rounded-2xl transition-all flex items-center justify-center gap-2 group"
-            >
-              {demoLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-accent" />
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-accent group-hover:rotate-12 transition-transform" />
-                  ENTER AS DEMO OPERATIVE
-                </>
-              )}
-            </button>
-
-            {/* Footer */}
-            <div className="mt-6 text-center">
-              <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
-                Existing Operative?{" "}
-                <Link href="/login" className="text-accent font-bold hover:underline transition-all ml-1">
-                  Authenticate Uplink →
-                </Link>
-              </p>
-            </div>
-          </>
+          <div className="mt-6 text-center">
+            <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
+              Existing Operative?{" "}
+              <Link href="/login" className="text-accent font-bold hover:underline transition-all ml-1">
+                Authenticate Uplink →
+              </Link>
+            </p>
+          </div>
         )}
       </motion.div>
     </div>

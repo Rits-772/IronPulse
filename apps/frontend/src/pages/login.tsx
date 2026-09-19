@@ -2,20 +2,19 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, KeyRound, ShieldCheck } from "lucide-react";
+import { Loader2, Mail, Lock, Eye, EyeOff, ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { loginSchema } from "@/lib/schemas";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { user, loading: authLoading, signIn, signInAsDemo, resetPassword } = useAuth();
+  const { user, loading: authLoading, signIn, resetPassword } = useAuth();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
   const [isResetOpen, setIsResetOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
@@ -59,16 +58,6 @@ export default function Login() {
     }
   };
 
-  const handleDemoLogin = () => {
-    setDemoLoading(true);
-    signInAsDemo();
-    toast({
-      title: "Demo Operative Activated",
-      description: "Sandbox protocol commenced with default telemetry profile.",
-    });
-    setLocation("/dashboard");
-  };
-
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!resetEmail) return;
@@ -94,7 +83,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-[#060608] flex items-center justify-center px-4 relative overflow-hidden font-rajdhani">
-      {/* Background Ambience & Hexagonal Grid */}
+      {/* Background Ambience & Grid */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30 z-0">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[140px] animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[120px]" />
@@ -128,7 +117,15 @@ export default function Login() {
             Authenticate <span className="text-primary text-glow">Uplink</span>
           </h1>
           <p className="text-muted-foreground mt-1 text-[10px] font-mono font-bold uppercase tracking-[0.3em] opacity-70">
-            Operative Neural Network Access
+            Authorized Personnel Only
+          </p>
+        </div>
+
+        {/* Security Badge */}
+        <div className="mb-6 p-3 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-3">
+          <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
+          <p className="text-[11px] font-mono text-muted-foreground leading-snug">
+            Protected neural gateway. Only operatives with verified accounts may establish connection.
           </p>
         </div>
 
@@ -147,7 +144,7 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-black/60 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono text-sm placeholder:text-muted-foreground/30"
                 placeholder="operative@domain.com"
-                disabled={loading || demoLoading}
+                disabled={loading}
               />
             </div>
           </div>
@@ -174,7 +171,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-black/60 border border-white/10 rounded-2xl pl-12 pr-12 py-3.5 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono text-sm placeholder:text-muted-foreground/30"
                 placeholder="••••••••••••"
-                disabled={loading || demoLoading}
+                disabled={loading}
               />
               <button 
                 type="button"
@@ -188,7 +185,7 @@ export default function Login() {
 
           <button 
             type="submit"
-            disabled={loading || demoLoading}
+            disabled={loading}
             className="w-full py-4 bg-primary text-black font-display font-black text-base uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all box-glow flex items-center justify-center gap-3 group relative overflow-hidden disabled:opacity-50 mt-2"
           >
             <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 skew-x-[-20deg]" />
@@ -202,36 +199,9 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="relative my-6 text-center">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-white/10" />
-          </div>
-          <span className="relative bg-[#0b0c10] px-3 text-[9px] font-mono uppercase tracking-widest text-muted-foreground">
-            or instant evaluation
-          </span>
-        </div>
-
-        {/* Demo One-Click Login */}
-        <button 
-          type="button"
-          onClick={handleDemoLogin}
-          disabled={loading || demoLoading}
-          className="w-full py-3.5 bg-white/5 border border-white/10 hover:border-primary/40 hover:bg-primary/5 text-white font-display font-bold text-xs uppercase tracking-[0.2em] rounded-2xl transition-all flex items-center justify-center gap-2 group"
-        >
-          {demoLoading ? (
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 text-primary group-hover:rotate-12 transition-transform" />
-              ENTER AS DEMO OPERATIVE
-            </>
-          )}
-        </button>
-
         {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-wider">
+        <div className="mt-8 text-center pt-4 border-t border-white/5">
+          <p className="text-[11px] text-muted-foreground font-mono uppercase tracking-wider">
             Unregistered Subject?{" "}
             <Link href="/register" className="text-primary font-bold hover:underline transition-all ml-1">
               Enroll New Operative →
