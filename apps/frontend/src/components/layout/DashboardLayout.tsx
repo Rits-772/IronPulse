@@ -18,7 +18,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     >
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
-      <div className="flex-1 flex flex-col min-w-0 relative z-10 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 relative overflow-y-auto">
         <Topbar onMenuClick={() => setIsSidebarOpen(true)} />
         <main className="flex-1 p-4 md:p-8 ml-0 md:ml-64 overflow-x-hidden relative">
           {children}

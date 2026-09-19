@@ -70,14 +70,37 @@ export default function Settings() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    // Security check: Max 2MB file size
+    const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "File Too Large",
+        description: "Avatar file size must be less than 2 MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Security check: Image MIME types only
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Only JPEG, PNG, WEBP, and GIF images are permitted.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/avatar.${fileExt}`;
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const sanitizedExt = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(fileExt) ? fileExt : 'png';
+      const fileName = `${user.id}/avatar.${sanitizedExt}`;
       
       // Upsert avatar
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(fileName, file, { upsert: true });
+        .upload(fileName, file, { upsert: true, contentType: file.type });
 
       if (uploadError) throw uploadError;
 
@@ -94,7 +117,7 @@ export default function Settings() {
     } catch (err: any) {
       toast({
         title: "Upload Failed",
-        description: "Ensure 'avatars' storage bucket is created in Supabase.",
+        description: err.message || "Ensure 'avatars' storage bucket is created in Supabase.",
         variant: "destructive"
       });
     }

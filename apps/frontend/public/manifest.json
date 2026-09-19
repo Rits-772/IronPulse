@@ -1,21 +1,48 @@
 {
-  "name": "IronPulse",
   "short_name": "IronPulse",
-  "description": "Elite Cybernetic Fitness Protocol",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#060608",
-  "theme_color": "#39FF14",
+  "name": "IronPulse: Cybernetic Performance Protocol",
+  "description": "Next-generation strength & biomechanical performance intelligence platform.",
   "icons": [
     {
-      "src": "logo.png",
+      "src": "/logo.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "logo.png",
+      "src": "/logo.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/dashboard",
+  "background_color": "#060608",
+  "theme_color": "#39FF14",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "categories": ["fitness", "health", "sports", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Quick Workout",
+      "short_name": "Log Session",
+      "description": "Log an immediate training session",
+      "url": "/log-workout",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Protocol Planner",
+      "short_name": "Planner",
+      "description": "Synthesize or customize routines",
+      "url": "/planner",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Exercise Vault",
+      "short_name": "Vault",
+      "description": "Browse 80+ movement protocols",
+      "url": "/exercises",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }
   ]
 }

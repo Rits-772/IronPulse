@@ -1,9 +1,10 @@
-import { useMemo, memo, lazy, Suspense } from "react";
+import { useMemo, memo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { motion, type Variants } from "framer-motion";
 import { 
   useActivityData, useProgressData, useWorkouts, usePersonalRecords, 
-  useProfile, useMetricsData, useNutritionData, useRpgStats, useAchievements 
+  useProfile, useMetricsData, useNutritionData, useRpgStats, useAchievements,
+  calculateLevel, getRankTier 
 } from "@/hooks/use-db-data";
 import { 
   Activity, Flame, TrendingUp, Weight, Play, Dumbbell, Trophy, 
@@ -16,8 +17,6 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
-
-const GymScene = lazy(() => import("@/components/3d/GymScene"));
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -245,15 +244,17 @@ export default function Dashboard() {
     ];
   }, [metrics, todayNutrition]);
 
+  const currentXp = profile?.xp ?? 0;
+  const currentLevel = calculateLevel(currentXp);
+  const rankInfo = getRankTier(currentLevel);
+  const currentLevelBaseXp = Math.pow(currentLevel - 1, 2) * 100;
+  const nextLevelTargetXp = Math.pow(currentLevel, 2) * 100;
+  const levelProgressPct = nextLevelTargetXp > currentLevelBaseXp
+    ? Math.min(100, Math.max(0, ((currentXp - currentLevelBaseXp) / (nextLevelTargetXp - currentLevelBaseXp)) * 100))
+    : 0;
+
   return (
     <DashboardLayout>
-      {/* 3D Background with Suspense */}
-      <div className="fixed inset-0 z-0 pointer-events-none lg:hidden opacity-30">
-        <Suspense fallback={<div className="w-full h-full bg-black/20" />}>
-          <GymScene />
-        </Suspense>
-      </div>
-
       <div className="relative z-10">
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
@@ -305,30 +306,32 @@ export default function Dashboard() {
 
           {/* Character Card & Attribute Bars */}
           <div className="flex flex-col gap-6">
-            <motion.div variants={itemVariants} className="bg-emerald-500/20 border border-emerald-500/30 rounded-2xl p-6 flex items-center justify-between relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-transparent pointer-events-none" />
-              <div className="flex items-center gap-6 relative z-10">
-                <div className="w-20 h-20 rounded-xl bg-black/40 border-2 border-emerald-500/50 overflow-hidden flex items-center justify-center">
-                  <Dumbbell className="w-10 h-10 text-emerald-500" />
+            <motion.div variants={itemVariants} className="bg-card/40 border border-primary/20 hover:border-primary/40 rounded-2xl p-6 flex items-center justify-between relative overflow-hidden group backdrop-blur-xl shadow-[0_0_30px_rgba(57,255,20,0.05)] transition-all">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-transparent pointer-events-none" />
+              <div className="flex items-center gap-5 relative z-10">
+                <div className="w-16 h-16 rounded-xl bg-black/60 border border-primary/30 overflow-hidden flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(57,255,20,0.2)]">
+                  <img src="/logo.svg" alt="Operative Badge" className="w-10 h-10 object-contain filter drop-shadow-[0_0_6px_rgba(57,255,20,0.6)]" />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-display font-black uppercase tracking-tighter text-emerald-400">{user?.user_metadata?.full_name?.split(' ')[0] || 'OPERATIVE'}</h2>
+                  <h2 className="text-2xl font-display font-black uppercase tracking-wider text-white group-hover:text-primary transition-colors">
+                    {user?.user_metadata?.full_name?.split(' ')[0] || user?.user_metadata?.username || profile?.full_name?.split(' ')[0] || 'OPERATIVE'}
+                  </h2>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex gap-0.5">
-                      {[...Array(5)].map((_, i) => <Star key={i} className="w-3 h-3 fill-emerald-500 text-emerald-500" />)}
+                      {[...Array(rankInfo.stars)].map((_, i) => <Star key={i} className="w-3 h-3 fill-primary text-primary" />)}
                     </div>
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Elite Tier</span>
+                    <span className="text-[10px] font-mono font-bold text-primary uppercase tracking-widest">{rankInfo.name}</span>
                   </div>
                 </div>
               </div>
               <div className="text-right relative z-10">
-                <div className="text-[10px] font-bold text-emerald-400/60 uppercase tracking-widest mb-1">Rank Status</div>
-                <div className="text-4xl font-display font-black text-white leading-none">LVL {profile?.level || 1}</div>
+                <div className="text-[9px] font-mono font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Neural Rank</div>
+                <div className="text-3xl font-display font-black text-primary leading-none text-glow">LVL {currentLevel}</div>
                 <div className="mt-2 flex items-center gap-2 justify-end">
-                  <div className="h-1.5 w-24 bg-black/40 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-400" style={{ width: `${profile?.xp ? (profile.xp % 100) : 0}%` }} />
+                  <div className="h-1.5 w-24 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                    <div className="h-full bg-primary shadow-[0_0_10px_#39FF14]" style={{ width: `${levelProgressPct}%` }} />
                   </div>
-                  <span className="text-[8px] font-bold text-emerald-400">{profile?.xp || 0} XP</span>
+                  <span className="text-[8px] font-mono font-bold text-primary">{currentXp} XP</span>
                 </div>
               </div>
             </motion.div>

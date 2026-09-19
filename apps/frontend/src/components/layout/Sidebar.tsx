@@ -11,11 +11,10 @@ import {
   User,
   LogOut,
   Salad,
-  MoreVertical,
   ChevronUp
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useProfile } from "@/hooks/use-db-data";
+import { useProfile, calculateLevel, getRankTier } from "@/hooks/use-db-data";
 import {
   Popover,
   PopoverContent,
@@ -24,25 +23,21 @@ import {
 import { Progress } from "@/components/ui/progress";
 
 function LevelProgress({ xp }: { xp: number }) {
-  const level = Math.floor(Math.sqrt(Math.max(0, xp) / 100)) + 1;
+  const safeXp = Math.max(0, xp || 0);
+  const level = calculateLevel(safeXp);
   const currentLevelXp = Math.pow(level - 1, 2) * 100;
   const nextLevelXp = Math.pow(level, 2) * 100;
-  const progress = ((xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
-
-  const getRankTier = (lvl: number) => {
-    if (lvl < 5) return "NEURAL INITIATE";
-    if (lvl < 15) return "PULSE OPERATIVE";
-    if (lvl < 30) return "KINETIC ENFORCER";
-    if (lvl < 50) return "SYNAPSE ELITE";
-    return "CYBERNETIC OVERLORD";
-  };
+  const progress = nextLevelXp > currentLevelXp 
+    ? Math.min(100, Math.max(0, ((safeXp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100))
+    : 0;
+  const rankInfo = getRankTier(level);
 
   return (
     <div className="px-3 py-4 border-t border-white/5 mt-2 space-y-3 bg-primary/5 rounded-xl border border-primary/10 mx-2">
       <div className="flex justify-between items-end">
         <div>
           <div className="text-[8px] font-bold text-primary/60 uppercase tracking-[0.2em] mb-0.5">Neural Rank</div>
-          <div className="text-[10px] font-display font-black text-foreground tracking-widest">{getRankTier(level)}</div>
+          <div className="text-[10px] font-display font-black text-foreground tracking-widest">{rankInfo.name}</div>
         </div>
         <div className="text-xl font-display font-black text-primary italic text-glow leading-none">LVL {level}</div>
       </div>
@@ -51,7 +46,7 @@ function LevelProgress({ xp }: { xp: number }) {
         <Progress value={progress} className="h-1.5 bg-white/5 border border-white/5" indicatorClassName="bg-primary shadow-[0_0_15px_#39FF14] transition-all duration-1000" />
         <div className="flex justify-between text-[7px] font-mono text-muted-foreground uppercase tracking-[0.1em]">
           <span className="flex items-center gap-1 group/xp">
-             <span className="text-primary font-bold">{xp.toLocaleString()}</span> 
+             <span className="text-primary font-bold">{safeXp.toLocaleString()}</span> 
              <span className="opacity-40 group-hover/xp:opacity-100 transition-opacity">DATA POINTS</span>
           </span>
           <span className="opacity-40">{nextLevelXp.toLocaleString()} XP FOR SYNC</span>
@@ -64,10 +59,11 @@ function LevelProgress({ xp }: { xp: number }) {
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Log Workout", href: "/log-workout", icon: Dumbbell },
+  { name: "Exercise Vault", href: "/exercises", icon: Activity },
   { name: "Workout History", href: "/history", icon: History },
   { name: "Progress Analytics", href: "/analytics", icon: BarChart2 },
   { name: "Nutrition Matrix", href: "/nutrition", icon: Salad },
-  { name: "Body Metrics", href: "/body-metrics", icon: Activity },
+  { name: "Body Metrics", href: "/body-metrics", icon: User },
   { name: "Workout Planner", href: "/planner", icon: CalendarDays },
 ];
 
@@ -90,81 +86,78 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () =>
         "w-64 h-screen bg-card/80 backdrop-blur-xl border-r border-border flex flex-col fixed left-0 top-0 z-50 transition-transform duration-300 md:translate-x-0 md:flex",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-      <div className="p-6 flex items-center gap-3">
-        <div className="w-10 h-10 flex items-center justify-center">
-          <img src="/logo.png" alt="Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_5px_rgba(57,255,20,0.5)]" />
+        <div className="p-6 flex items-center gap-3">
+          <div className="w-9 h-9 flex items-center justify-center shrink-0">
+            <img src="/logo.svg" alt="IronPulse Logo" className="w-full h-full object-contain filter drop-shadow-[0_0_8px_rgba(57,255,20,0.6)]" />
+          </div>
+          <h1 className="text-2xl font-display font-bold tracking-widest text-foreground text-glow uppercase">
+            Iron<span className="text-primary">Pulse</span>
+          </h1>
         </div>
-        <h1 className="text-2xl font-display font-bold tracking-widest text-foreground text-glow uppercase">
-          Iron<span className="text-primary">Pulse</span>
-        </h1>
-      </div>
 
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-        <div className="text-xs font-sans text-muted-foreground uppercase tracking-widest mb-4 px-2">Training</div>
-        {navItems.map((item) => {
-          const isActive = location === item.href;
-          return (
-            <Link key={item.name} href={item.href} className="block">
-              <div className={cn(
-                "flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group cursor-pointer",
-                isActive 
-                  ? "bg-primary/10 text-primary" 
-                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-              )}>
-                <item.icon className={cn(
-                  "w-5 h-5 transition-transform duration-200 group-hover:scale-110",
-                  isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                )} />
-                <span className="font-sans font-medium text-lg">{item.name}</span>
-                {isActive && (
-                  <div className="ml-auto w-1 h-5 bg-primary rounded-full box-glow" />
-                )}
-              </div>
-            </Link>
-          );
-        })}
-      </nav>
-
-      <div className="p-2 border-t border-border mt-auto bg-card/40">
-        {profile && <LevelProgress xp={profile.xp || 0} />}
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className="w-full mt-2 flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-secondary/50 transition-all group border border-transparent hover:border-white/5">
-              <div className="w-10 h-10 rounded-full bg-secondary border border-white/10 flex items-center justify-center overflow-hidden">
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-5 h-5 text-muted-foreground" />
-                )}
-              </div>
-              <div className="min-w-0 flex-1 text-left">
-                <div className="text-sm font-bold font-sans truncate">{profile?.full_name || user?.user_metadata?.full_name || 'Subject Alpha'}</div>
-                <div className="text-[10px] text-muted-foreground font-mono truncate uppercase">{user?.email || 'Unauthorized'}</div>
-              </div>
-              <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="center" className="w-[240px] p-2 bg-card/95 backdrop-blur-2xl border-white/10 shadow-2xl rounded-2xl mb-2">
-            <div className="space-y-1">
-              <Link href="/settings">
-                <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all cursor-pointer">
-                  <Settings className="w-4 h-4" />
-                  <span className="text-sm font-bold uppercase tracking-wider">Interface Settings</span>
+        <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+          <div className="text-[10px] font-mono text-muted-foreground uppercase tracking-[0.2em] mb-3 px-3 font-bold opacity-60">Protocols & Vault</div>
+          {navItems.map((item) => {
+            const isActive = location === item.href;
+            return (
+              <Link key={item.name} href={item.href} className="block">
+                <div className={cn(
+                  "flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-200 group cursor-pointer border text-xs font-mono tracking-wider uppercase",
+                  isActive 
+                    ? "bg-primary/10 text-primary border-primary/30 shadow-[0_0_15px_rgba(57,255,20,0.1)] font-bold" 
+                    : "text-muted-foreground border-transparent hover:bg-white/5 hover:text-white hover:border-white/5"
+                )}>
+                  <item.icon className={cn(
+                    "w-4 h-4 transition-transform group-hover:scale-110",
+                    isActive ? "text-primary text-glow-small" : "text-muted-foreground group-hover:text-primary"
+                  )} />
+                  <span className="truncate">{item.name}</span>
                 </div>
               </Link>
-              <div className="h-px bg-white/5 my-1" />
-              <button 
-                onClick={() => signOut()}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all group"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="text-sm font-bold uppercase tracking-wider">Terminate Session</span>
+            );
+          })}
+        </nav>
+
+        <div className="p-2 border-t border-border mt-auto bg-card/40">
+          {profile && <LevelProgress xp={profile.xp || 0} />}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="w-full mt-2 flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-secondary/50 transition-all group border border-transparent hover:border-white/5">
+                <div className="w-10 h-10 rounded-full bg-secondary border border-white/10 flex items-center justify-center overflow-hidden">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-5 h-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <div className="text-sm font-bold font-sans truncate">{profile?.full_name || user?.user_metadata?.full_name || 'Subject Alpha'}</div>
+                  <div className="text-[10px] text-muted-foreground font-mono truncate uppercase">{user?.email || 'Unauthorized'}</div>
+                </div>
+                <ChevronUp className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
               </button>
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="center" className="w-[240px] p-2 bg-card/95 backdrop-blur-2xl border-white/10 shadow-2xl rounded-2xl mb-2">
+              <div className="space-y-1">
+                <Link href="/settings">
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all cursor-pointer">
+                    <Settings className="w-4 h-4" />
+                    <span className="text-sm font-bold uppercase tracking-wider">Interface Settings</span>
+                  </div>
+                </Link>
+                <div className="h-px bg-white/5 my-1" />
+                <button 
+                  onClick={() => signOut()}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all group"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="text-sm font-bold uppercase tracking-wider">Terminate Session</span>
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
-    </div>
-  </>
-);
+    </>
+  );
 }

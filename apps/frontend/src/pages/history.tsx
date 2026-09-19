@@ -49,30 +49,31 @@ export default function History() {
            Array(6).fill(0).map((_, i) => (
              <div key={i} className="h-64 bg-card border border-white/5 rounded-xl animate-pulse"></div>
            ))
-        ) : (
-          workouts?.map((workout, index) => (
+        ) : workouts && workouts.length > 0 ? (
+          workouts.map((workout, index) => (
             <motion.div 
               key={workout.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-card border border-white/5 rounded-xl p-6 hover:border-primary/50 transition-colors group cursor-pointer relative overflow-hidden"
+              transition={{ delay: index * 0.05 }}
+              className="bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 hover:border-primary/40 transition-all group relative overflow-hidden shadow-lg"
             >
               {/* Highlight bar */}
               <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-xl font-display font-bold uppercase tracking-wider">{workout.name}</h3>
+                  <h3 className="text-xl font-display font-bold uppercase tracking-wider text-white group-hover:text-primary transition-colors">{workout.name}</h3>
                   <div className="flex items-center gap-2 text-muted-foreground mt-1">
-                    <Calendar className="w-3 h-3" />
-                    <span className="text-xs font-bold uppercase tracking-widest">{workout.date}</span>
+                    <Calendar className="w-3 h-3 text-primary" />
+                    <span className="text-xs font-mono font-bold uppercase tracking-widest">{workout.date}</span>
                   </div>
                 </div>
                 <button 
                   onClick={() => handleDelete(workout.id)}
                   disabled={deleteWorkout.isPending}
-                  className="p-2 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                  className="p-2 text-muted-foreground hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition-colors disabled:opacity-50"
+                  title="Purge Record"
                 >
                   {deleteWorkout.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 </button>
@@ -80,33 +81,41 @@ export default function History() {
 
               <div className="space-y-3 mb-6">
                 {workout.exercises.slice(0, 3).map((ex: any, i: number) => (
-                  <div key={i} className="flex justify-between text-sm">
-                    <span className="text-foreground">{ex.name}</span>
-                    <span className="text-muted-foreground font-mono font-bold">{ex.sets}x{ex.reps} @ {ex.weight}</span>
+                  <div key={i} className="flex justify-between text-xs">
+                    <span className="text-foreground/90 font-medium">{ex.name}</span>
+                    <span className="text-primary/80 font-mono font-bold">{ex.sets}x{ex.reps} @ {ex.weight} lbs</span>
                   </div>
                 ))}
                 {workout.exercises.length > 3 && (
-                  <div className="text-xs text-primary font-bold uppercase tracking-wider mt-2">
-                    + {workout.exercises.length - 3} more
+                  <div className="text-[10px] text-primary font-mono font-bold uppercase tracking-wider mt-2">
+                    + {workout.exercises.length - 3} additional movements
                   </div>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
                 <div>
-                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Volume</div>
-                  <div className="font-display font-bold text-xl">{workout.volume.toLocaleString()} <span className="text-xs text-muted-foreground">LBS</span></div>
+                  <div className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Volume</div>
+                  <div className="font-display font-black text-xl text-white">{workout.volume.toLocaleString()} <span className="text-xs text-muted-foreground font-sans">LBS</span></div>
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1">Duration</div>
-                  <div className="font-display font-bold text-xl flex items-center gap-1">
-                    {workout.duration} <span className="text-xs text-muted-foreground">MIN</span>
+                  <div className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Duration</div>
+                  <div className="font-display font-black text-xl text-white flex items-center gap-1">
+                    {workout.duration} <span className="text-xs text-muted-foreground font-sans">MIN</span>
                     <Flame className="w-4 h-4 text-orange-500 ml-1" />
                   </div>
                 </div>
               </div>
             </motion.div>
           ))
+        ) : (
+          <div className="col-span-full p-16 rounded-2xl bg-card/20 border border-white/5 text-center space-y-4">
+            <Dumbbell className="w-12 h-12 text-muted-foreground/40 mx-auto" />
+            <h3 className="text-xl font-display font-bold uppercase text-white">No Archive Sessions Found</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+              Your mission archive is currently unpopulated. Complete and commit your first session to record neural performance metrics.
+            </p>
+          </div>
         )}
       </div>
     </DashboardLayout>

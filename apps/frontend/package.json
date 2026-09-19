@@ -41,8 +41,6 @@
     "@radix-ui/react-tooltip": "^1.2.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
-    "@splinetool/react-spline": "^4.1.0",
-    "@splinetool/runtime": "^1.12.69",
     "@supabase/supabase-js": "^2.99.1",
     "@tanstack/react-query": "catalog:",
     "class-variance-authority": "catalog:",
@@ -71,9 +69,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@replit/vite-plugin-cartographer": "catalog:",
-    "@replit/vite-plugin-dev-banner": "catalog:",
-    "@replit/vite-plugin-runtime-error-modal": "catalog:",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "catalog:",
     "@types/node": "catalog:",

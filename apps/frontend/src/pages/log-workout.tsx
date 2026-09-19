@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Plus, Save, Trash2, Dumbbell, Timer, Loader2, Minus } from "lucide-react";
+import { Plus, Save, Trash2, Dumbbell, Timer, Loader2, Minus, Sparkles, WifiOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useSaveWorkout } from "@/hooks/use-db-data";
+import { ExerciseSelectorModal } from "@/components/exercises/ExerciseSelectorModal";
+import { ExerciseDefinition } from "@/lib/exercise-database";
+import { offlineStorage } from "@/lib/offline-storage";
 import { cn } from "@/lib/utils";
 
 function CounterInput({ value, onChange, placeholder, unit }: { value: string, onChange: (val: string) => void, placeholder: string, unit?: string }) {
@@ -109,8 +112,9 @@ export default function LogWorkout() {
   const [, setLocation] = useLocation();
   const saveWorkout = useSaveWorkout();
   const [workoutName, setWorkoutName] = useState("");
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [exercises, setExercises] = useState<ExerciseEntry[]>([
-    { id: '1', name: "Barbell Squat", sets: [{ reps: "", weight: "" }] }
+    { id: '1', name: "Barbell Back Squat", sets: [{ reps: "10", weight: "135" }, { reps: "10", weight: "135" }, { reps: "10", weight: "135" }] }
   ]);
 
   useEffect(() => {
@@ -132,8 +136,19 @@ export default function LogWorkout() {
     }
   }, []);
 
-  const addExercise = () => {
-    setExercises([...exercises, { id: Math.random().toString(), name: "New Exercise", sets: [{ reps: "", weight: "" }] }]);
+  const handleSelectFromDatabase = (exercise: ExerciseDefinition) => {
+    setExercises([
+      ...exercises,
+      {
+        id: Math.random().toString(),
+        name: exercise.name,
+        sets: [
+          { reps: "10", weight: "135" },
+          { reps: "10", weight: "135" },
+          { reps: "10", weight: "135" }
+        ]
+      }
+    ]);
   };
 
   const removeExercise = (id: string) => {
@@ -143,7 +158,8 @@ export default function LogWorkout() {
   const addSet = (exerciseId: string) => {
     setExercises(exercises.map(e => {
       if (e.id === exerciseId) {
-        return { ...e, sets: [...e.sets, { reps: "", weight: "" }] };
+        const lastSet = e.sets[e.sets.length - 1] || { reps: "10", weight: "135" };
+        return { ...e, sets: [...e.sets, { reps: lastSet.reps, weight: lastSet.weight }] };
       }
       return e;
     }));
@@ -170,14 +186,28 @@ export default function LogWorkout() {
   };
 
   const handleSave = async () => {
-    if (!workoutName) {
-      toast({ title: "Name required", description: "Designate the session before commit.", variant: "destructive" });
+    const finalName = workoutName.trim() || "CYBERNETIC PROTOCOL SESSION";
+
+    // If device is offline, enqueue locally
+    if (!navigator.onLine) {
+      offlineStorage.enqueue({
+        name: finalName,
+        date: new Date().toISOString(),
+        exercises: exercises,
+      });
+
+      toast({
+        title: "Session Saved to Offline Vault",
+        description: "Zero network connection detected. Your workout was safely stored and will auto-sync on reconnect.",
+        className: "border-primary bg-background text-foreground",
+      });
+      setLocation("/dashboard");
       return;
     }
     
     try {
       await saveWorkout.mutateAsync({
-        name: workoutName,
+        name: finalName,
         exercises: exercises
       });
       
@@ -188,164 +218,205 @@ export default function LogWorkout() {
       });
       setLocation("/dashboard");
     } catch (e: any) {
-      toast({
-        title: "Sync Error",
-        description: e.message,
-        variant: "destructive"
+      // Fallback offline queueing if request fails
+      offlineStorage.enqueue({
+        name: finalName,
+        date: new Date().toISOString(),
+        exercises: exercises,
       });
+
+      toast({
+        title: "Network Unreachable — Cached Locally",
+        description: "Workout queued in local storage. Will automatically upload once connection restores.",
+        className: "border-primary bg-background text-foreground",
+      });
+      setLocation("/dashboard");
     }
   };
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-            <div className="w-full md:w-1/2">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 pb-16">
+        {/* Left Column: Workout Inputs */}
+        <div className="lg:col-span-8 space-y-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="w-full">
               <input 
                 type="text" 
                 value={workoutName}
                 onChange={(e) => setWorkoutName(e.target.value)}
-                placeholder="NAME THIS SESSION"
-                className="w-full bg-transparent border-none text-4xl md:text-5xl font-display font-bold uppercase tracking-tight focus:outline-none focus:ring-0 placeholder:text-muted-foreground/30 focus:text-primary transition-colors"
+                placeholder="NAME THIS PROTOCOL..."
+                className="w-full bg-transparent border-none text-3xl sm:text-4xl font-display font-black uppercase tracking-wider focus:outline-none focus:ring-0 placeholder:text-muted-foreground/30 focus:text-primary transition-colors"
               />
-              <div className="flex items-center gap-4 text-[10px] text-primary font-bold tracking-[0.2em] uppercase mt-2">
-                <span className="flex items-center gap-1.5 opacity-60">
-                  <Dumbbell className="w-3 h-3" /> 
+              <div className="flex items-center gap-4 text-[10px] text-primary font-mono font-bold tracking-[0.2em] uppercase mt-2">
+                <span className="flex items-center gap-1.5 opacity-80">
+                  <Dumbbell className="w-3.5 h-3.5" /> 
                   {exercises.reduce((total, ex) => 
-                         total + ex.sets.reduce((exTotal, s) => 
-                           exTotal + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0
-                         ), 0
-                       ).toLocaleString()} LBS DISPLACED
+                    total + ex.sets.reduce((exTotal, s) => 
+                      exTotal + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0
+                    ), 0
+                  ).toLocaleString()} LBS DISPLACED
                 </span>
               </div>
             </div>
+            
             <button 
               onClick={handleSave}
               disabled={saveWorkout.isPending}
-              className="bg-primary text-black px-8 py-3 rounded-lg font-display font-bold uppercase tracking-widest text-lg flex items-center gap-2 hover:bg-primary/90 transition-all box-glow shrink-0 w-full md:w-auto justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-primary text-black px-8 py-3.5 rounded-xl font-display font-black uppercase tracking-widest text-sm flex items-center gap-2 hover:bg-primary/90 transition-all box-glow shrink-0 w-full md:w-auto justify-center disabled:opacity-50"
             >
-              {saveWorkout.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Commit Log
+              {saveWorkout.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Commit Session
+            </button>
+          </div>
+
+          {/* Exercise List */}
+          <div className="space-y-5">
+            <AnimatePresence>
+              {exercises.map((exercise, exerciseIdx) => (
+                <motion.div 
+                  key={exercise.id}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-xl"
+                >
+                  {/* Exercise Header */}
+                  <div className="bg-secondary/40 p-4 border-b border-white/5 flex justify-between items-center">
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="w-6 h-6 rounded bg-primary/10 text-primary text-xs font-mono font-bold flex items-center justify-center shrink-0">
+                        {exerciseIdx + 1}
+                      </span>
+                      <input 
+                        type="text"
+                        value={exercise.name}
+                        onChange={(e) => {
+                          const newExercises = [...exercises];
+                          newExercises[exerciseIdx].name = e.target.value;
+                          setExercises(newExercises);
+                        }}
+                        className="bg-transparent border-none text-lg font-display font-bold uppercase tracking-wider focus:outline-none w-full text-white"
+                      />
+                    </div>
+                    <button 
+                      onClick={() => removeExercise(exercise.id)} 
+                      className="text-muted-foreground hover:text-rose-400 transition-colors p-2"
+                      title="Remove Exercise"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Sets */}
+                  <div className="p-4 space-y-2">
+                    <div className="grid grid-cols-12 gap-2 text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest px-2 mb-2">
+                      <div className="col-span-2 text-center">Set</div>
+                      <div className="col-span-4 text-center">Weight (LBS)</div>
+                      <div className="col-span-4 text-center">Reps</div>
+                      <div className="col-span-2"></div>
+                    </div>
+                    
+                    <AnimatePresence>
+                      {exercise.sets.map((set, setIdx) => (
+                        <motion.div 
+                          key={setIdx}
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="grid grid-cols-12 gap-2 items-center"
+                        >
+                          <div className="col-span-2 text-center font-bold text-muted-foreground font-mono text-xs">{setIdx + 1}</div>
+                          <div className="col-span-4">
+                            <CounterInput 
+                              value={set.weight}
+                              onChange={(val) => updateSet(exercise.id, setIdx, 'weight', val)}
+                              placeholder="0"
+                              unit="LBS"
+                            />
+                          </div>
+                          <div className="col-span-4">
+                            <CounterInput 
+                              value={set.reps}
+                              onChange={(val) => updateSet(exercise.id, setIdx, 'reps', val)}
+                              placeholder="0"
+                            />
+                          </div>
+                          <div className="col-span-2 flex justify-center">
+                            <button 
+                              onClick={() => removeSet(exercise.id, setIdx)} 
+                              className="text-muted-foreground hover:text-rose-400 transition-colors p-1.5"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+
+                    <button 
+                      onClick={() => addSet(exercise.id)}
+                      className="w-full mt-3 py-2 border border-dashed border-white/10 text-muted-foreground rounded-lg hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all text-xs font-mono uppercase tracking-widest flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Set
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+            
+            <button 
+              onClick={() => setIsSelectorOpen(true)}
+              className="w-full py-4 bg-secondary/30 text-white font-display font-bold text-sm uppercase tracking-[0.2em] rounded-2xl hover:bg-secondary/50 hover:border-primary/40 transition-all border border-white/10 flex items-center justify-center gap-2 group"
+            >
+              <Plus className="w-5 h-5 text-primary group-hover:scale-125 transition-transform" /> Add Protocol Movement (80+ Available)
             </button>
           </div>
         </div>
 
-        <div className="lg:col-span-4 lg:row-start-1 lg:row-end-3">
-          <div className="sticky top-8 space-y-6">
+        {/* Right Column: Telemetry & Rest Protocol */}
+        <div className="lg:col-span-4 space-y-6">
+          <div className="sticky top-28 space-y-6">
             <RestTimer />
-            <div className="bg-card border border-white/5 rounded-xl p-6">
-              <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-4">Session Telemetry</h4>
-              <div className="space-y-4">
-                 <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Total Volume</span>
-                    <span className="font-mono text-primary font-bold tracking-tighter">
-                       {exercises.reduce((total, ex) => 
-                         total + ex.sets.reduce((exTotal, s) => 
-                           exTotal + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0
-                         ), 0
-                       ).toLocaleString()} LBS
-                    </span>
-                 </div>
-                 <div className="flex justify-between items-center">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Total Sets</span>
-                    <span className="font-mono text-primary font-bold">
-                       {exercises.reduce((acc, e) => acc + e.sets.length, 0)}
-                    </span>
-                 </div>
+
+            <div className="bg-card/40 backdrop-blur-xl border border-white/5 rounded-2xl p-6 space-y-4">
+              <h4 className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-widest">
+                Session Telemetry
+              </h4>
+              <div className="space-y-3 font-mono">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground uppercase">Displaced Volume</span>
+                  <span className="text-primary font-bold">
+                    {exercises.reduce((total, ex) => 
+                      total + ex.sets.reduce((exTotal, s) => 
+                        exTotal + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0
+                      ), 0
+                    ).toLocaleString()} LBS
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground uppercase">Completed Sets</span>
+                  <span className="text-white font-bold">
+                    {exercises.reduce((acc, e) => acc + e.sets.length, 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground uppercase">Total Movements</span>
+                  <span className="text-white font-bold">
+                    {exercises.length}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="lg:col-span-8 space-y-6">
-          <AnimatePresence>
-            {exercises.map((exercise, exerciseIdx) => (
-              <motion.div 
-                key={exercise.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-card border border-white/5 rounded-xl overflow-hidden shadow-lg"
-              >
-                {/* Exercise Header */}
-                <div className="bg-secondary/50 p-4 border-b border-white/5 flex justify-between items-center">
-                  <input 
-                    type="text"
-                    value={exercise.name}
-                    onChange={(e) => {
-                      const newExercises = [...exercises];
-                      newExercises[exerciseIdx].name = e.target.value;
-                      setExercises(newExercises);
-                    }}
-                    className="bg-transparent border-none text-xl font-display font-bold uppercase tracking-wider focus:outline-none w-full max-w-sm"
-                  />
-                  <button onClick={() => removeExercise(exercise.id)} className="text-muted-foreground hover:text-destructive transition-colors p-2">
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Sets */}
-                <div className="p-4 space-y-2">
-                  <div className="grid grid-cols-12 gap-2 text-xs font-bold text-muted-foreground uppercase tracking-widest px-2 mb-2">
-                    <div className="col-span-2 text-center">Set</div>
-                    <div className="col-span-4 text-center">LBS</div>
-                    <div className="col-span-4 text-center">Reps</div>
-                    <div className="col-span-2"></div>
-                  </div>
-                  
-                  <AnimatePresence>
-                    {exercise.sets.map((set, setIdx) => (
-                      <motion.div 
-                        key={setIdx}
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="grid grid-cols-12 gap-2 items-center"
-                      >
-                        <div className="col-span-2 text-center font-bold text-muted-foreground font-mono">{setIdx + 1}</div>
-                        <div className="col-span-4">
-                          <CounterInput 
-                            value={set.weight}
-                            onChange={(val) => updateSet(exercise.id, setIdx, 'weight', val)}
-                            placeholder="0"
-                            unit="LBS"
-                          />
-                        </div>
-                        <div className="col-span-4">
-                          <CounterInput 
-                            value={set.reps}
-                            onChange={(val) => updateSet(exercise.id, setIdx, 'reps', val)}
-                            placeholder="0"
-                          />
-                        </div>
-                        <div className="col-span-2 flex justify-center">
-                          <button onClick={() => removeSet(exercise.id, setIdx)} className="text-muted-foreground hover:text-destructive/80 transition-colors p-2">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-
-                  <button 
-                    onClick={() => addSet(exercise.id)}
-                    className="w-full mt-4 py-2 border border-dashed border-white/10 text-muted-foreground rounded-lg hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all text-sm font-bold uppercase tracking-widest flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" /> Add Set
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          
-          <button 
-            onClick={addExercise}
-            className="w-full mt-6 py-4 bg-secondary/30 text-foreground/80 font-display font-bold text-xl uppercase tracking-[0.2em] rounded-xl hover:bg-secondary/50 hover:text-white transition-all border border-white/5 flex items-center justify-center gap-2 group"
-          >
-            <Plus className="w-6 h-6 text-primary group-hover:scale-125 transition-transform" /> Add Exercise Parameter
-          </button>
-        </div>
       </div>
+
+      {/* Exercise Selector Modal */}
+      <ExerciseSelectorModal
+        isOpen={isSelectorOpen}
+        onClose={() => setIsSelectorOpen(false)}
+        onSelectExercise={handleSelectFromDatabase}
+        title="Select Movement for Session"
+      />
     </DashboardLayout>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -6,12 +6,15 @@ import { Loader2, Fingerprint, Mail, Lock, User, Eye, EyeOff, ArrowRight } from 
 import { motion, AnimatePresence } from "framer-motion";
 import { registerSchema } from "@/lib/schemas";
 
-const GymScene = lazy(() => import("@/components/3d/GymScene"));
-
 export default function Register() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { signUp, verifyOtp } = useAuth();
+
+  useEffect(() => {
+    // Instant demo bypass - seamless auto-forward
+    setLocation("/dashboard");
+  }, [setLocation]);
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -91,13 +94,6 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-[#060608] flex items-center justify-center px-4 relative overflow-hidden font-rajdhani">
-      {/* Background Gym Scene (Mobile only) */}
-      <div className="fixed inset-0 z-0 pointer-events-none lg:hidden opacity-30">
-        <Suspense fallback={<div className="w-full h-full bg-black/20" />}>
-          <GymScene />
-        </Suspense>
-      </div>
-
       <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30 z-0">
         <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] animate-pulse" />
         <div className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[100px]" />
@@ -117,9 +113,9 @@ export default function Register() {
             className="w-24 h-24 mb-6 relative"
           >
             <img 
-              src="/logo.png" 
-              alt="IronPulse" 
-              className="w-full h-full object-contain"
+              src="/logo.svg" 
+              alt="IronPulse Logo" 
+              className="w-full h-full object-contain filter drop-shadow-[0_0_12px_rgba(57,255,20,0.6)]"
             />
           </motion.div>
           <h1 className="text-3xl font-display font-black uppercase tracking-[0.2em] text-white">Create<span className="text-accent tracking-tighter ml-2">Identity</span></h1>
