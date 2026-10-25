@@ -233,8 +233,8 @@ export default function Dashboard() {
   }, [workouts, todayNutrition, streak]);
 
   const horizontalStats = useMemo(() => {
-    const latestWeight = metrics && metrics.length > 0 ? metrics[metrics.length - 1].weight : 80;
-    const latestBodyFat = metrics && metrics.length > 0 ? metrics[metrics.length - 1].bodyFat : 20;
+    const latestWeight = metrics && metrics.length > 0 ? metrics[metrics.length - 1].weight : (profile?.weight_goal || 0);
+    const latestBodyFat = metrics && metrics.length > 0 ? metrics[metrics.length - 1].bodyFat : (profile?.body_fat_goal || 0);
 
     return [
       { title: "Weight", value: latestWeight, unit: "KG", icon: Weight, color: "text-primary" },
@@ -242,7 +242,7 @@ export default function Dashboard() {
       { title: "Strength Index", value: "+12%", unit: "MoM", icon: TrendingUp, color: "text-purple-500" },
       { title: "Hydration", value: (todayNutrition.water_ml / 1000).toFixed(1), unit: "L", icon: Heart, color: "text-blue-500" },
     ];
-  }, [metrics, todayNutrition]);
+  }, [metrics, profile, todayNutrition]);
 
   const currentXp = profile?.xp ?? 0;
   const currentLevel = calculateLevel(currentXp);

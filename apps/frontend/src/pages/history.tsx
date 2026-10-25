@@ -1,6 +1,7 @@
+import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useWorkouts, useDeleteWorkout } from "@/hooks/use-db-data";
-import { Calendar, Dumbbell, Filter, Flame, Trash2, Loader2 } from "lucide-react";
+import { Calendar, Dumbbell, Filter, Flame, Trash2, Loader2, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
@@ -8,6 +9,52 @@ export default function History() {
   const { data: workouts, isLoading } = useWorkouts();
   const deleteWorkout = useDeleteWorkout();
   const { toast } = useToast();
+
+  const [selectedExercise, setSelectedExercise] = useState("ALL");
+  const [dateRange, setDateRange] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const uniqueExercises = useMemo(() => {
+    if (!workouts) return [];
+    const set = new Set<string>();
+    workouts.forEach(w => w.exercises?.forEach((ex: any) => {
+      if (ex.name) set.add(ex.name);
+    }));
+    return Array.from(set).sort();
+  }, [workouts]);
+
+  const filteredWorkouts = useMemo(() => {
+    if (!workouts) return [];
+    let list = [...workouts];
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(w => 
+        w.name.toLowerCase().includes(q) || 
+        w.exercises?.some((ex: any) => ex.name?.toLowerCase().includes(q))
+      );
+    }
+
+    if (selectedExercise !== "ALL") {
+      list = list.filter(w => 
+        w.exercises?.some((ex: any) => ex.name === selectedExercise)
+      );
+    }
+
+    if (dateRange !== "ALL") {
+      const now = new Date();
+      list = list.filter(w => {
+        const d = new Date(w.date);
+        const diffDays = (now.getTime() - d.getTime()) / (1000 * 3600 * 24);
+        if (dateRange === "7D") return diffDays <= 7;
+        if (dateRange === "30D") return diffDays <= 30;
+        if (dateRange === "90D") return diffDays <= 90;
+        return true;
+      });
+    }
+
+    return list;
+  }, [workouts, searchQuery, selectedExercise, dateRange]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to purge this record?")) return;
@@ -25,22 +72,52 @@ export default function History() {
         <h1 className="text-4xl font-display font-bold tracking-widest uppercase mb-4">Training Archive</h1>
         
         {/* Filters */}
-        <div className="flex flex-wrap gap-4 items-center bg-card border border-white/5 p-4 rounded-xl">
-          <div className="flex items-center gap-2 text-muted-foreground font-bold text-sm uppercase tracking-wider mr-4">
-            <Filter className="w-4 h-4" /> Filters
+        <div className="flex flex-wrap gap-3 items-center bg-card/60 backdrop-blur-xl border border-white/5 p-4 rounded-2xl">
+          <div className="flex items-center gap-2 text-primary font-mono font-bold text-xs uppercase tracking-wider mr-2">
+            <Filter className="w-4 h-4" /> FILTERS:
           </div>
-          <select className="bg-background border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary">
-            <option>All Exercises</option>
-            <option>Squat</option>
-            <option>Bench Press</option>
-            <option>Deadlift</option>
+
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search session name or exercise..."
+              className="w-full bg-black/50 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-xs font-mono uppercase text-white focus:outline-none focus:border-primary transition-all placeholder:text-muted-foreground/40"
+            />
+          </div>
+
+          <select 
+            value={selectedExercise}
+            onChange={(e) => setSelectedExercise(e.target.value)}
+            className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono uppercase text-white focus:outline-none focus:border-primary cursor-pointer"
+          >
+            <option value="ALL">All Movement Vectors</option>
+            {uniqueExercises.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
           </select>
-          <select className="bg-background border border-white/10 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary">
-            <option>Last 30 Days</option>
-            <option>Last 3 Months</option>
-            <option>This Year</option>
-            <option>All Time</option>
+
+          <select 
+            value={dateRange}
+            onChange={(e) => setDateRange(e.target.value)}
+            className="bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono uppercase text-white focus:outline-none focus:border-primary cursor-pointer"
+          >
+            <option value="ALL">All Time</option>
+            <option value="7D">Past 7 Days</option>
+            <option value="30D">Past 30 Days</option>
+            <option value="90D">Past 90 Days</option>
           </select>
+
+          {(searchQuery || selectedExercise !== "ALL" || dateRange !== "ALL") && (
+            <button
+              onClick={() => { setSearchQuery(""); setSelectedExercise("ALL"); setDateRange("ALL"); }}
+              className="text-[10px] font-mono font-bold text-muted-foreground hover:text-white uppercase tracking-wider px-2 py-1"
+            >
+              Reset
+            </button>
+          )}
         </div>
       </div>
 
@@ -49,8 +126,8 @@ export default function History() {
            Array(6).fill(0).map((_, i) => (
              <div key={i} className="h-64 bg-card border border-white/5 rounded-xl animate-pulse"></div>
            ))
-        ) : workouts && workouts.length > 0 ? (
-          workouts.map((workout, index) => (
+        ) : filteredWorkouts.length > 0 ? (
+          filteredWorkouts.map((workout, index) => (
             <motion.div 
               key={workout.id}
               initial={{ opacity: 0, y: 20 }}
@@ -113,7 +190,7 @@ export default function History() {
             <Dumbbell className="w-12 h-12 text-muted-foreground/40 mx-auto" />
             <h3 className="text-xl font-display font-bold uppercase text-white">No Archive Sessions Found</h3>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Your mission archive is currently unpopulated. Complete and commit your first session to record neural performance metrics.
+              Your mission archive has no matching sessions. Try adjusting your filter parameters or start a new workout.
             </p>
           </div>
         )}

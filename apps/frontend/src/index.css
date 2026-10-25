@@ -57,7 +57,9 @@
   --color-sidebar-ring: hsl(var(--sidebar-ring));
 
   --font-sans: 'Rajdhani', sans-serif;
+  --font-rajdhani: 'Rajdhani', sans-serif;
   --font-display: 'Barlow Condensed', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
