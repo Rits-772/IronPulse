@@ -331,26 +331,31 @@ export default function Register() {
       localStorage.setItem('ironpulse_local_metrics', JSON.stringify([initialMetric]));
     } catch {}
 
-    // If session established immediately (email confirmation disabled)
+    // If session established immediately
     if (data?.session) {
       try {
-        // Update user profile in Supabase
-        await supabase.from('profiles').update({
-          full_name: telemetryData.fullName,
-          username: cleanUsername,
-          height_cm: heightCm,
-          weight_goal: targetWeightKg,
-          body_fat_goal: synthesisMetrics.estimatedBodyFat,
-          bio: `Directive: ${primaryGoal.toUpperCase()} | Archetype: ${dreamPhysique.toUpperCase()}`
-        }).eq('id', data.session.user.id);
-
-        // Record initial baseline body metric
-        await supabase.from('body_metrics').insert({
-          user_id: data.session.user.id,
-          weight_kg: currentWeightKg,
-          body_fat: synthesisMetrics.estimatedBodyFat,
-          notes: `Initial Operative Baseline: ${primaryGoal.toUpperCase()}`
-        });
+        // Attempt fast cloud profile sync with timeout guard (1.5s max so user never hangs)
+        const cloudSync = Promise.allSettled([
+          supabase.from('profiles').update({
+            full_name: telemetryData.fullName,
+            username: cleanUsername,
+            height_cm: heightCm,
+            weight_goal: targetWeightKg,
+            body_fat_goal: synthesisMetrics.estimatedBodyFat,
+            bio: `Directive: ${primaryGoal.toUpperCase()} | Archetype: ${dreamPhysique.toUpperCase()}`
+          }).eq('id', data.session.user.id),
+          supabase.from('body_metrics').insert({
+            user_id: data.session.user.id,
+            weight_kg: currentWeightKg,
+            body_fat: synthesisMetrics.estimatedBodyFat,
+            notes: `Initial Operative Baseline: ${primaryGoal.toUpperCase()}`
+          })
+        ]);
+        
+        await Promise.race([
+          cloudSync,
+          new Promise((resolve) => setTimeout(resolve, 1500))
+        ]);
       } catch (err) {
         console.warn("Could not save initial profile telemetry to DB directly:", err);
       }

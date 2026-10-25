@@ -5,7 +5,7 @@ const numericString = z.string().regex(/^\d*\.?\d*$/).transform(v => v === "" ? 
 
 // Auth Schemas
 export const loginSchema = z.object({
-  email: z.string().email("Invalid operational email"),
+  email: z.string().min(2, "Operative identifier or email required"),
   password: z.string().min(6, "Passkey must be at least 6 characters")
 });
 

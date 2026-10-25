@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2, Mail, Lock, Eye, EyeOff, ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
+import { Loader2, Mail, Lock, Eye, EyeOff, ArrowRight, KeyRound, ShieldCheck, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { loginSchema } from "@/lib/schemas";
 
@@ -140,18 +140,20 @@ export default function Login() {
         <form className="space-y-5" onSubmit={handleLogin}>
           <div className="space-y-2">
             <label className="text-[10px] font-mono font-bold text-muted-foreground uppercase tracking-[0.2em] ml-1">
-              Email Vector
+              Operative Callsign / Email
             </label>
             <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <input 
-                type="email" 
+                type="text" 
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-black/60 border border-white/10 rounded-2xl pl-12 pr-4 py-3.5 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-mono text-sm placeholder:text-muted-foreground/30"
-                placeholder="operative@domain.com"
+                placeholder="Callsign or email (e.g. shadow_runner or operative@ironpulse.io)"
                 disabled={loading}
+                autoCapitalize="none"
+                autoCorrect="off"
               />
             </div>
           </div>
