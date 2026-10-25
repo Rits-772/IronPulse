@@ -54,6 +54,8 @@ const testimonialsData = [
 export default function Landing() {
   const { scrollYProgress } = useScroll();
   const heroOpacity = useTransform(scrollYProgress, [0, 0.12], [1, 0]);
+  const bgY = useTransform(scrollYProgress, [0, 0.22], [0, 80]);
+  const bgOpacity = useTransform(scrollYProgress, [0, 0.20], [1, 0]);
 
   return (
     <div className="relative min-h-screen bg-[#060608] text-foreground font-sans selection:bg-primary/30 selection:text-primary">
@@ -76,16 +78,19 @@ export default function Landing() {
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center pt-24 pb-12 overflow-hidden">
-        {/* Responsive Lightweight 3D Background */}
-        <div className="absolute inset-0 z-0">
+        {/* Responsive Lightweight 3D Background with Smooth Parallax Transition */}
+        <motion.div 
+          style={{ y: bgY, opacity: bgOpacity }} 
+          className="absolute inset-0 z-0 pointer-events-none"
+        >
           <Suspense fallback={<div className="w-full h-full bg-[#060608]" />}>
             <GymScene />
           </Suspense>
-        </div>
+        </motion.div>
 
         {/* Cinematic Vignette Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/50 to-transparent z-[5] pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#060608] to-transparent z-[6] pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#060608] via-[#060608]/80 to-transparent z-[6] pointer-events-none" />
 
         <motion.div style={{ opacity: heroOpacity }} className="container px-6 md:px-12 mx-auto relative z-10 w-full flex items-center">
           <div className="text-left w-full relative z-20 max-w-3xl">

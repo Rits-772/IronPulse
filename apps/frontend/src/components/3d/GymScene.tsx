@@ -4,7 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 function CSSFallbackBackground() {
   return (
     <div
-      className="fixed inset-0 w-full h-full -z-10 overflow-hidden pointer-events-none"
+      className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none"
       style={{
         background: `
           radial-gradient(ellipse at 20% 40%, rgba(57,255,20,0.12) 0%, transparent 60%),
@@ -44,25 +44,38 @@ export default function GymScene() {
   }
 
   return (
-    <div className="fixed inset-0 w-full h-full -z-10 bg-[#060608] pointer-events-none overflow-hidden">
+    <div 
+      className="absolute inset-0 w-full h-full bg-[#060608] pointer-events-none overflow-hidden"
+      style={{ 
+        transform: "translate3d(0, 0, 0)",
+        willChange: "transform",
+      }}
+    >
       <Suspense fallback={<CSSFallbackBackground />}>
         <CyberHyperspeed 
-          speed={isMobile ? 1.2 : 1.8} 
-          streakCount={isMobile ? 120 : 320} 
-          starCount={isMobile ? 300 : 800} 
+          speed={isMobile ? 1.0 : 1.4} 
+          streakCount={isMobile ? 100 : 260} 
+          starCount={isMobile ? 250 : 650} 
         />
       </Suspense>
 
       {/* Ambient Lighting Orbs referencing Full Stack Portfolio Hero */}
-      <div className="absolute top-1/4 right-[12%] w-[420px] h-[420px] rounded-full bg-primary/10 blur-[140px] pointer-events-none animate-pulse" />
-      <div className="absolute bottom-1/4 left-[8%] w-[480px] h-[480px] rounded-full bg-[#00D4FF]/10 blur-[160px] pointer-events-none" />
+      <div 
+        className="absolute top-1/4 right-[12%] w-[420px] h-[420px] rounded-full bg-primary/10 blur-[140px] pointer-events-none animate-pulse" 
+        style={{ transform: "translate3d(0,0,0)" }}
+      />
+      <div 
+        className="absolute bottom-1/4 left-[8%] w-[480px] h-[480px] rounded-full bg-[#00D4FF]/10 blur-[160px] pointer-events-none" 
+        style={{ transform: "translate3d(0,0,0)" }}
+      />
 
       {/* Cybernetic Subtle Hex Grid Overlay */}
       <div 
-        className="absolute inset-0 pointer-events-none opacity-[0.14]"
+        className="absolute inset-0 pointer-events-none opacity-[0.12]"
         style={{
           backgroundImage: `radial-gradient(circle at 1px 1px, rgba(57,255,20,0.3) 1px, transparent 0)`,
-          backgroundSize: '36px 36px'
+          backgroundSize: '36px 36px',
+          transform: "translate3d(0,0,0)",
         }}
       />
     </div>
